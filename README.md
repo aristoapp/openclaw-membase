@@ -1,26 +1,22 @@
-<p align="center">
-  <img src="https://membase.so/icon.png" alt="Membase" width="80" />
-</p>
-
-<h1 align="center">Membase for OpenClaw</h1>
+<h1 align="center">Membase Plugin for OpenClaw</h1>
 
 <p align="center">
-  Persistent long-term memory for AI agents — hybrid vector search + knowledge graph.
+  Persistent long-term memory for OpenClaw — hybrid vector search + knowledge graph.
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@membase/openclaw-membase"><img src="https://img.shields.io/npm/v/@membase/openclaw-membase.svg" alt="npm" /></a>
-  <a href="https://www.npmjs.com/package/@membase/openclaw-membase"><img src="https://img.shields.io/npm/dm/@membase/openclaw-membase.svg" alt="downloads" /></a>
-  <a href="https://github.com/aristoapp/openclaw-membase/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@membase/openclaw-membase.svg" alt="license" /></a>
+  <a href="https://x.com/intent/follow?screen_name=mem_base"><img src="https://img.shields.io/badge/Follow%20on%20X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X"></a>
+  <a href="https://www.linkedin.com/company/aristotechnologies"><img src="https://img.shields.io/badge/Follow%20on%20LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Follow on LinkedIn"></a>
+  <a href="https://discord.gg/qfzXNdtmkv"><img src="https://img.shields.io/badge/Join%20Our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Our Discord"></a>
 </p>
 
 <p align="center">
-  <a href="https://membase.so">Website</a> · <a href="https://docs.membase.so">Docs</a> · <a href="https://app.membase.so">Dashboard</a> · <a href="https://github.com/aristoapp/openclaw-membase/issues">Issues</a>
+  <a href="https://membase.so/?utm_source=github&utm_medium=openclaw-membase">Website</a> · <a href="https://docs.membase.so">Docs</a> · <a href="https://app.membase.so">Dashboard</a> · <a href="https://github.com/aristoapp/openclaw-membase/issues">Issues</a>
 </p>
 
 ---
 
-Give your [OpenClaw](https://openclaw.com) agent persistent memory that survives across sessions. Unlike simple vector stores, Membase combines **semantic vector search** with a **Neo4j knowledge graph** — so your agent remembers not just text, but entities, relationships, and facts.
+Give your [OpenClaw](https://openclaw.ai/) agent persistent memory that survives across sessions. Membase uses hybrid vector search + knowledge graph to remember not just text, but entities, relationships, and facts.
 
 > **Free to start** — Sign up at [app.membase.so](https://app.membase.so) and connect in under a minute.
 
@@ -44,34 +40,34 @@ Opens a browser for OAuth authentication. Tokens are saved automatically — no 
 
 Once installed, the plugin runs two hooks behind the scenes:
 
-```
+```txt
 User message
     │
     ▼
 ┌─────────────────────────┐
-│  Auto-Recall             │  Searches Membase for relevant memories
-│  (before_agent_start)    │  and injects them as context
+│  Auto-Recall            │  Searches Membase for relevant memories
+│  (before_agent_start)   │  and injects them as context
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
-│  AI Response             │  Agent can also call membase_search,
-│                          │  membase_store, etc. autonomously
+│  AI Response            │  Agent can also call membase_search,
+│                         │  membase_store, etc. autonomously
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
-│  Auto-Capture            │  Buffers messages, flushes to Membase
-│  (agent_end)             │  for entity/relationship extraction
+│  Auto-Capture           │  Buffers messages, flushes to Membase
+│  (agent_end)            │  for entity/relationship extraction
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
-│  Membase Backend         │  Vector embeddings + Neo4j graph
-│  (api.membase.so)        │  via Graphiti extraction pipeline
+│  Membase Backend        │  Hybrid vector search + knowledge graph
+│  (api.membase.so)       │
 └─────────────────────────┘
 ```
 
 - **Auto-Recall** — Before every AI turn, searches your memories by semantic similarity and injects relevant context. Skips casual chat and short messages. Respects a `maxRecallChars` budget (default 4000) to avoid oversized context.
-- **Auto-Capture** — After conversations, buffers messages and sends them to Membase for extraction. Entities and relationships are automatically extracted into a knowledge graph via [Graphiti](https://github.com/getzep/graphiti). Flushes after 5 minutes of silence or 20 messages.
-- **Knowledge Graph** — Unlike simple vector-only memory, Membase stores entities, relationships, and facts in Neo4j. Search results include related nodes and edges for richer context.
+- **Auto-Capture** — After conversations, buffers messages and sends them to Membase for extraction. Entities and relationships are automatically extracted into a knowledge graph. Flushes after 5 minutes of silence or 20 messages.
+- **Knowledge Graph** — Unlike simple vector-only memory, Membase uses hybrid vector search + knowledge graph to store entities, relationships, and facts. Search results include related nodes and edges for richer context.
 
 ## AI Tools
 
@@ -128,9 +124,9 @@ OAuth tokens (`accessToken`, `refreshToken`, `clientId`) are managed automatical
 
 | | Simple vector memory | **Membase** |
 | --- | --- | --- |
-| **Storage** | Flat embeddings | Hybrid: vector embeddings + Neo4j knowledge graph |
+| **Storage** | Flat embeddings | Hybrid: vector embeddings + knowledge graph |
 | **Search** | Vector similarity only | Vector + graph traversal (entities, relationships, facts) |
-| **Extraction** | Store raw text | AI-powered entity/relationship extraction via Graphiti |
+| **Extraction** | Store raw text | AI-powered entity/relationship extraction |
 | **Auth** | API key | OAuth 2.0 with PKCE (no secrets to manage) |
 | **Ingest** | Synchronous | Async pipeline (~100ms response, background graph sync) |
 
@@ -151,10 +147,10 @@ Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 ## Links
 
-- [Membase](https://membase.so) — Website
+- [Membase](https://membase.so/?utm_source=github&utm_medium=openclaw-membase) — Website
 - [Dashboard](https://app.membase.so) — Manage your memories
 - [Docs](https://docs.membase.so) — Full documentation
-- [OpenClaw](https://openclaw.com) — AI agent framework
+- [OpenClaw](https://openclaw.ai/) — AI agent framework
 
 ## License
 
