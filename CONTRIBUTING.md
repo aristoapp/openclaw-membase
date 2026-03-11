@@ -5,7 +5,7 @@ Thanks for your interest in contributing! Here's how to get started.
 ## Development Setup
 
 ```bash
-git clone https://github.com/membase-ai/openclaw-membase.git
+git clone https://github.com/aristoapp/openclaw-membase.git
 cd openclaw-membase
 bun install
 ```
@@ -32,7 +32,7 @@ bun run lint
 
 ## Reporting Bugs
 
-Open an [issue](https://github.com/membase-ai/openclaw-membase/issues) with:
+Open an [issue](https://github.com/aristoapp/openclaw-membase/issues) with:
 
 - Steps to reproduce
 - Expected vs actual behavior
@@ -40,7 +40,7 @@ Open an [issue](https://github.com/membase-ai/openclaw-membase/issues) with:
 
 ## Feature Requests
 
-Open an [issue](https://github.com/membase-ai/openclaw-membase/issues) describing:
+Open an [issue](https://github.com/aristoapp/openclaw-membase/issues) describing:
 
 - The problem you're trying to solve
 - Your proposed solution (if any)
