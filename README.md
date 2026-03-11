@@ -1,12 +1,22 @@
+<p align="center">
+  <img src="https://membase.so/icon.png" alt="Membase" width="80" />
+</p>
 
+<h1 align="center">Membase for OpenClaw</h1>
 
-# Membase for OpenClaw
+<p align="center">
+  Persistent long-term memory for AI agents — hybrid vector search + knowledge graph.
+</p>
 
-Persistent long-term memory for AI agents — hybrid vector search + knowledge graph.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@membase/openclaw-membase"><img src="https://img.shields.io/npm/v/@membase/openclaw-membase.svg" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@membase/openclaw-membase"><img src="https://img.shields.io/npm/dm/@membase/openclaw-membase.svg" alt="downloads" /></a>
+  <a href="https://github.com/aristoapp/openclaw-membase/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@membase/openclaw-membase.svg" alt="license" /></a>
+</p>
 
-
-
-[Website](https://membase.so) · [Docs](https://docs.membase.so) · [Dashboard](https://app.membase.so) · [Issues](https://github.com/membase-ai/openclaw-membase/issues)
+<p align="center">
+  <a href="https://membase.so">Website</a> · <a href="https://docs.membase.so">Docs</a> · <a href="https://app.membase.so">Dashboard</a> · <a href="https://github.com/aristoapp/openclaw-membase/issues">Issues</a>
+</p>
 
 ---
 
@@ -67,14 +77,12 @@ User message
 
 The agent uses these tools autonomously during conversations:
 
-
-| Tool              | Description                                                                                         |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| `membase_search`  | Search memories by semantic similarity. Returns episode bundles with related facts.                 |
-| `membase_store`   | Save important information to long-term memory. Proactively stores preferences, goals, and context. |
-| `membase_forget`  | Delete a memory. Shows matches first, then deletes after user confirmation (two-step).              |
-| `membase_profile` | Retrieve user profile and related memories for session context.                                     |
-
+| Tool | Description |
+| --- | --- |
+| `membase_search` | Search memories by semantic similarity. Returns episode bundles with related facts. |
+| `membase_store` | Save important information to long-term memory. Proactively stores preferences, goals, and context. |
+| `membase_forget` | Delete a memory. Shows matches first, then deletes after user confirmation (two-step). |
+| `membase_profile` | Retrieve user profile and related memories for session context. |
 
 ## CLI Commands
 
@@ -89,15 +97,13 @@ openclaw membase status             # Check API connectivity
 
 All configuration is managed through OpenClaw's plugin settings or `~/.openclaw/openclaw.json`:
 
-
-| Key              | Type    | Default                  | Description                                            |
-| ---------------- | ------- | ------------------------ | ------------------------------------------------------ |
-| `apiUrl`         | string  | `https://api.membase.so` | Membase API URL. Override for self-hosted.             |
-| `autoRecall`     | boolean | `true`                   | Inject relevant memories before every AI turn.         |
-| `autoCapture`    | boolean | `true`                   | Automatically store conversations to memory.           |
-| `maxRecallChars` | number  | `4000`                   | Max characters of memory context per turn (500–16000). |
-| `debug`          | boolean | `false`                  | Enable verbose debug logs.                             |
-
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `apiUrl` | string | `https://api.membase.so` | Membase API URL. Override for self-hosted. |
+| `autoRecall` | boolean | `true` | Inject relevant memories before every AI turn. |
+| `autoCapture` | boolean | `true` | Automatically store conversations to memory. |
+| `maxRecallChars` | number | `4000` | Max characters of memory context per turn (500–16000). |
+| `debug` | boolean | `false` | Enable verbose debug logs. |
 
 OAuth tokens (`accessToken`, `refreshToken`, `clientId`) are managed automatically by `openclaw membase login`.
 
@@ -120,20 +126,18 @@ OAuth tokens (`accessToken`, `refreshToken`, `clientId`) are managed automatical
 
 ## How Membase Differs
 
-
-|                | Simple vector memory   | **Membase**                                               |
-| -------------- | ---------------------- | --------------------------------------------------------- |
-| **Storage**    | Flat embeddings        | Hybrid: vector embeddings + Neo4j knowledge graph         |
-| **Search**     | Vector similarity only | Vector + graph traversal (entities, relationships, facts) |
-| **Extraction** | Store raw text         | AI-powered entity/relationship extraction via Graphiti    |
-| **Auth**       | API key                | OAuth 2.0 with PKCE (no secrets to manage)                |
-| **Ingest**     | Synchronous            | Async pipeline (~100ms response, background graph sync)   |
-
+| | Simple vector memory | **Membase** |
+| --- | --- | --- |
+| **Storage** | Flat embeddings | Hybrid: vector embeddings + Neo4j knowledge graph |
+| **Search** | Vector similarity only | Vector + graph traversal (entities, relationships, facts) |
+| **Extraction** | Store raw text | AI-powered entity/relationship extraction via Graphiti |
+| **Auth** | API key | OAuth 2.0 with PKCE (no secrets to manage) |
+| **Ingest** | Synchronous | Async pipeline (~100ms response, background graph sync) |
 
 ## Development
 
 ```bash
-git clone https://github.com/membase-ai/openclaw-membase.git
+git clone https://github.com/aristoapp/openclaw-membase.git
 cd openclaw-membase
 bun install
 bun run check-types
