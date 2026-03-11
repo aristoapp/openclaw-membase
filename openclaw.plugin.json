@@ -1,58 +1,58 @@
 {
-  "id": "openclaw-membase",
-  "kind": "memory",
-  "uiHints": {
-    "apiUrl": {
-      "label": "Membase API URL",
-      "placeholder": "https://api.membase.so",
-      "advanced": true
-    },
-    "accessToken": {
-      "label": "OAuth Access Token",
-      "sensitive": true,
-      "advanced": true
-    },
-    "refreshToken": {
-      "label": "OAuth Refresh Token",
-      "sensitive": true,
-      "advanced": true
-    },
-    "clientId": {
-      "label": "OAuth Client ID",
-      "advanced": true
-    },
-    "autoRecall": {
-      "label": "Auto-Recall",
-      "help": "Inject relevant memories before every AI turn"
-    },
-    "autoCapture": {
-      "label": "Auto-Capture",
-      "help": "Automatically store conversations to memory"
-    },
-    "maxRecallChars": {
-      "label": "Max Recall Context Size",
-      "placeholder": "4000",
-      "help": "Maximum characters of memory context injected per turn (500–16000)",
-      "advanced": true
-    },
-    "debug": {
-      "label": "Debug Logging",
-      "help": "Enable verbose debug logs for API calls and responses",
-      "advanced": true
-    }
-  },
-  "configSchema": {
-    "type": "object",
-    "additionalProperties": false,
-    "properties": {
-      "apiUrl": { "type": "string" },
-      "clientId": { "type": "string" },
-      "accessToken": { "type": "string" },
-      "refreshToken": { "type": "string" },
-      "autoRecall": { "type": "boolean" },
-      "autoCapture": { "type": "boolean" },
-      "maxRecallChars": { "type": "number", "minimum": 500, "maximum": 16000 },
-      "debug": { "type": "boolean" }
-    }
-  }
+	"id": "openclaw-membase",
+	"kind": "memory",
+	"uiHints": {
+		"apiUrl": {
+			"label": "Membase API URL",
+			"placeholder": "https://api.membase.so",
+			"advanced": true
+		},
+		"accessToken": {
+			"label": "OAuth Access Token",
+			"sensitive": true,
+			"advanced": true
+		},
+		"refreshToken": {
+			"label": "OAuth Refresh Token",
+			"sensitive": true,
+			"advanced": true
+		},
+		"clientId": {
+			"label": "OAuth Client ID",
+			"advanced": true
+		},
+		"autoRecall": {
+			"label": "Auto-Recall",
+			"help": "Inject relevant memories before every AI turn"
+		},
+		"autoCapture": {
+			"label": "Auto-Capture",
+			"help": "Automatically store conversations to memory"
+		},
+		"maxRecallChars": {
+			"label": "Max Recall Context Size",
+			"placeholder": "4000",
+			"help": "Maximum characters of memory context injected per turn (500–16000)",
+			"advanced": true
+		},
+		"debug": {
+			"label": "Debug Logging",
+			"help": "Enable verbose debug logs for API calls and responses",
+			"advanced": true
+		}
+	},
+	"configSchema": {
+		"type": "object",
+		"additionalProperties": false,
+		"properties": {
+			"apiUrl": { "type": "string" },
+			"clientId": { "type": "string" },
+			"accessToken": { "type": "string" },
+			"refreshToken": { "type": "string" },
+			"autoRecall": { "type": "boolean" },
+			"autoCapture": { "type": "boolean" },
+			"maxRecallChars": { "type": "number", "minimum": 500, "maximum": 16000 },
+			"debug": { "type": "boolean" }
+		}
+	}
 }

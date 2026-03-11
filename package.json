@@ -1,52 +1,46 @@
 {
-  "name": "@membase/openclaw-membase",
-  "version": "0.3.1",
-  "main": "./index.ts",
-  "description": "Membase plugin for OpenClaw — persistent long-term memory for AI agents",
-  "type": "module",
-  "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun",
-    "prepublishOnly": "bun run build",
-    "lint": "biome check .",
-    "check-types": "tsc --noEmit"
-  },
-  "files": [
-    "dist/",
-    "src/",
-    "index.ts",
-    "openclaw.plugin.json"
-  ],
-  "keywords": [
-    "openclaw",
-    "membase",
-    "memory",
-    "ai",
-    "plugin",
-    "long-term-memory",
-    "knowledge-graph",
-    "vector-search",
-    "ai-agent"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/membase-ai/openclaw-membase.git"
-  },
-  "homepage": "https://github.com/membase-ai/openclaw-membase#readme",
-  "bugs": {
-    "url": "https://github.com/membase-ai/openclaw-membase/issues"
-  },
-  "peerDependencies": {
-    "openclaw": ">=2026.1.0"
-  },
-  "openclaw": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@types/bun": "^1.2.14",
-    "typescript": "5.9.2"
-  }
+	"name": "@membase/openclaw-membase",
+	"version": "0.3.1",
+	"main": "./index.ts",
+	"description": "Membase plugin for OpenClaw — persistent long-term memory for AI agents",
+	"type": "module",
+	"scripts": {
+		"build": "bun build src/index.ts --outdir dist --target bun",
+		"prepublishOnly": "bun run build",
+		"format": "biome format --write .",
+		"lint": "biome check .",
+		"check-types": "tsc --noEmit"
+	},
+	"files": ["dist/", "src/", "index.ts", "openclaw.plugin.json"],
+	"keywords": [
+		"openclaw",
+		"membase",
+		"memory",
+		"ai",
+		"plugin",
+		"long-term-memory",
+		"knowledge-graph",
+		"vector-search",
+		"ai-agent"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/membase-ai/openclaw-membase.git"
+	},
+	"homepage": "https://github.com/membase-ai/openclaw-membase#readme",
+	"bugs": {
+		"url": "https://github.com/membase-ai/openclaw-membase/issues"
+	},
+	"peerDependencies": {
+		"openclaw": ">=2026.1.0"
+	},
+	"openclaw": {
+		"extensions": ["./index.ts"]
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/bun": "^1.2.14",
+		"typescript": "5.9.2"
+	}
 }
