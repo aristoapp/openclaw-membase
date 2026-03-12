@@ -19,6 +19,7 @@ export interface ToolDefinition {
   label: string;
   description: string;
   parameters: Record<string, unknown>;
+  // biome-ignore lint: OpenClaw calls execute with tool-specific param shapes
   execute: (toolCallId: string, params: any) => Promise<ToolResult>;
 }
 
