@@ -1,6 +1,6 @@
 <h1 align="center">Membase Plugin for OpenClaw</h1>
 
-[![Membase banner](https://github.com/user-attachments/assets/3b2a41cc-cf06-4464-89c5-7e2a8bef16e4)](https://membase.so/?utm_source=github&utm_medium=openclaw-membase)
+[![Membase banner](https://github.com/user-attachments/assets/19393af8-7af0-4e8f-9967-b5c9d8119d83)](https://membase.so/?utm_source=github&utm_medium=openclaw-membase)
 
 <p align="center">
   Persistent long-term memory for OpenClaw — hybrid vector search + knowledge graph.
