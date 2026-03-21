@@ -1,10 +1,21 @@
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import type { MembasePluginConfig, OpenClawPluginApi } from "./types";
 
 const DEFAULT_API_URL = "https://api.membase.so";
+const DEFAULT_TOKEN_FILE_PATH = join(
+  homedir(),
+  ".openclaw",
+  "extensions",
+  "openclaw-membase",
+  "tokens.json",
+);
 
 const KNOWN_KEYS = new Set([
   "apiUrl",
   "clientId",
+  "tokenFile",
   "accessToken",
   "refreshToken",
   "autoRecall",
@@ -13,8 +24,81 @@ const KNOWN_KEYS = new Set([
   "debug",
 ]);
 
+type TokenPair = {
+  accessToken: string;
+  refreshToken: string;
+};
+
 function str(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
+}
+
+function expandHomePath(inputPath: string): string {
+  if (inputPath === "~") return homedir();
+  if (inputPath.startsWith("~/")) {
+    return join(homedir(), inputPath.slice(2));
+  }
+  return inputPath;
+}
+
+function asTokenPair(value: unknown): TokenPair {
+  if (!value || typeof value !== "object") {
+    return { accessToken: "", refreshToken: "" };
+  }
+
+  const obj = value as Record<string, unknown>;
+  return {
+    accessToken: str(obj.accessToken, ""),
+    refreshToken: str(obj.refreshToken, ""),
+  };
+}
+
+export function resolveTokenFilePath(
+  pluginConfig: Record<string, unknown> = {},
+): string {
+  const configured = str(pluginConfig.tokenFile, "");
+  return expandHomePath(configured || DEFAULT_TOKEN_FILE_PATH);
+}
+
+export function readTokenFile(
+  tokenFile: string,
+  logger?: OpenClawPluginApi["logger"],
+): TokenPair {
+  try {
+    const raw = readFileSync(tokenFile, "utf-8");
+    return asTokenPair(JSON.parse(raw));
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: string }).code === "ENOENT"
+    ) {
+      return { accessToken: "", refreshToken: "" };
+    }
+    if (logger) {
+      logger.warn(
+        `membase: failed to read token file at ${tokenFile}; falling back to plugin config`,
+      );
+    }
+    return { accessToken: "", refreshToken: "" };
+  }
+}
+
+export function writeTokenFile(tokenFile: string, tokens: TokenPair): void {
+  const dir = dirname(tokenFile);
+  mkdirSync(dir, { recursive: true });
+  const tempPath = `${tokenFile}.tmp`;
+  const payload = JSON.stringify(
+    {
+      accessToken: str(tokens.accessToken, ""),
+      refreshToken: str(tokens.refreshToken, ""),
+    },
+    null,
+    2,
+  );
+  writeFileSync(tempPath, `${payload}\n`, "utf-8");
+  renameSync(tempPath, tokenFile);
 }
 
 export function parseConfig(
@@ -30,14 +114,18 @@ export function parseConfig(
     );
   }
 
+  const tokenFile = resolveTokenFilePath(pluginConfig);
+  const fileTokens = readTokenFile(tokenFile, logger);
+
   return {
     apiUrl:
       str(pluginConfig.apiUrl, "") ||
       process.env.MEMBASE_API_URL ||
       DEFAULT_API_URL,
     clientId: str(pluginConfig.clientId, ""),
-    accessToken: str(pluginConfig.accessToken, ""),
-    refreshToken: str(pluginConfig.refreshToken, ""),
+    tokenFile,
+    accessToken: fileTokens.accessToken || str(pluginConfig.accessToken, ""),
+    refreshToken: fileTokens.refreshToken || str(pluginConfig.refreshToken, ""),
     autoRecall: (pluginConfig.autoRecall as boolean) ?? true,
     autoCapture: (pluginConfig.autoCapture as boolean) ?? true,
     maxRecallChars: Math.max(

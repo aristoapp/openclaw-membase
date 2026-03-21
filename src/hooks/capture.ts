@@ -6,6 +6,17 @@ const CONTEXT_TAG_RE = /<membase-context>[\s\S]*?<\/membase-context>\s*/g;
 const SILENCE_TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_BUFFER_SIZE = 20;
 const MIN_MESSAGES_TO_FLUSH = 4;
+const UNTRUSTED_METADATA_BLOCK_RE =
+  /^(sender|conversation info)\s*\(untrusted metadata\):\s*```json[\s\S]*```$/i;
+const HEARTBEAT_CONTROL_PATTERNS = [
+  /^heartbeat$/i,
+  /^heartbeat_ok$/i,
+  /^heartbeat ok$/i,
+  /^heartbeat:\s*(ok|idle|noop)$/i,
+  /^heartbeat ping$/i,
+  /^heartbeat check$/i,
+  /\bcheck\s+heartbeat\.md\b/i,
+];
 
 interface BufferedMessage {
   role: "user" | "assistant";
@@ -30,6 +41,13 @@ function getLastTurn(messages: unknown[]): unknown[] {
     }
   }
   return lastUserIdx >= 0 ? messages.slice(lastUserIdx) : messages;
+}
+
+function isOperationalMessage(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (UNTRUSTED_METADATA_BLOCK_RE.test(trimmed)) return true;
+  return HEARTBEAT_CONTROL_PATTERNS.some((pattern) => pattern.test(trimmed));
 }
 
 async function flushBuffer(
@@ -98,6 +116,7 @@ export function registerCaptureHook(
 
         let text = extractTextContent(m.content);
         text = text.replace(CONTEXT_TAG_RE, "").trim();
+        if (isOperationalMessage(text)) continue;
         if (text.length >= 10) {
           newMessages.push({ role: role as "user" | "assistant", text });
         }

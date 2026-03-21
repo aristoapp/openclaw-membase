@@ -45,6 +45,7 @@ export interface OpenClawPluginApi {
 export interface MembasePluginConfig {
   apiUrl: string;
   clientId: string;
+  tokenFile: string;
   accessToken: string;
   refreshToken: string;
   autoRecall: boolean;

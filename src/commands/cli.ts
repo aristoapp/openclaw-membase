@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 import type { MembaseClient } from "../client";
+import { resolveTokenFilePath, writeTokenFile } from "../config";
 import { formatBundles } from "../format";
 import type { OpenClawPluginApi } from "../types";
 
@@ -246,6 +247,19 @@ export async function upsertPluginConfig(
   await writeFile(configPath, `${JSON.stringify(root, null, 2)}\n`, "utf-8");
 }
 
+async function readCurrentPluginConfig(): Promise<JsonObject> {
+  const configPath = getOpenClawConfigPath();
+  try {
+    const root = asObject(JSON.parse(await readFile(configPath, "utf-8")));
+    const plugins = asObject(root.plugins);
+    const entries = asObject(plugins.entries);
+    const currentEntry = asObject(entries["openclaw-membase"]);
+    return asObject(currentEntry.config);
+  } catch {
+    return {};
+  }
+}
+
 async function createPkce() {
   const verifierBytes = crypto.getRandomValues(new Uint8Array(32));
   const verifier = b64url(verifierBytes);
@@ -385,11 +399,19 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
             verifier,
           );
 
+          const existingConfig = await readCurrentPluginConfig();
+          const tokenFile = resolveTokenFilePath(existingConfig);
+          writeTokenFile(tokenFile, {
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token ?? "",
+          });
+
           await upsertPluginConfig({
             apiUrl,
             clientId,
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token ?? "",
+            tokenFile,
+            accessToken: "",
+            refreshToken: "",
           });
 
           api.logger.info("OAuth login complete. Plugin config saved.");
@@ -454,7 +476,14 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
         .description("Remove stored OAuth tokens and disconnect")
         .action(async () => {
           try {
+            const existingConfig = await readCurrentPluginConfig();
+            const tokenFile = resolveTokenFilePath(existingConfig);
+            writeTokenFile(tokenFile, {
+              accessToken: "",
+              refreshToken: "",
+            });
             await upsertPluginConfig({
+              tokenFile,
               accessToken: "",
               refreshToken: "",
               clientId: "",

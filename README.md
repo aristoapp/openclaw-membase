@@ -98,12 +98,14 @@ All configuration is managed through OpenClaw's plugin settings or `~/.openclaw/
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `apiUrl` | string | `https://api.membase.so` | Membase API URL. Override for self-hosted. |
+| `tokenFile` | string | `~/.openclaw/extensions/openclaw-membase/tokens.json` | OAuth token cache file path. |
 | `autoRecall` | boolean | `true` | Inject relevant memories before every AI turn. |
 | `autoCapture` | boolean | `true` | Automatically store conversations to memory. |
 | `maxRecallChars` | number | `4000` | Max characters of memory context per turn (500–16000). |
 | `debug` | boolean | `false` | Enable verbose debug logs. |
 
-OAuth tokens (`accessToken`, `refreshToken`, `clientId`) are managed automatically by `openclaw membase login`.
+OAuth login keeps stable plugin config in `~/.openclaw/openclaw.json` and stores rotating tokens in `tokenFile`.
+Legacy keys (`accessToken`, `refreshToken`) are migrated automatically when present.
 
 ```json
 {

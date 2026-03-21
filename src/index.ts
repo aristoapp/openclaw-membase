@@ -1,6 +1,6 @@
 import { MembaseClient } from "./client";
 import { registerCli, upsertPluginConfig } from "./commands/cli";
-import { parseConfig } from "./config";
+import { parseConfig, readTokenFile, writeTokenFile } from "./config";
 import { flushAllBuffers, registerCaptureHook } from "./hooks/capture";
 import { registerRecallHook } from "./hooks/recall";
 import { registerForgetTool } from "./tools/forget";
@@ -16,7 +16,53 @@ export default {
   kind: "memory" as const,
 
   register(api: OpenClawPluginApi) {
-    const cfg = parseConfig(api.pluginConfig ?? {}, api.logger);
+    const rawPluginConfig = api.pluginConfig ?? {};
+    const cfg = parseConfig(rawPluginConfig, api.logger);
+
+    const legacyAccessToken =
+      typeof rawPluginConfig.accessToken === "string"
+        ? rawPluginConfig.accessToken
+        : "";
+    const legacyRefreshToken =
+      typeof rawPluginConfig.refreshToken === "string"
+        ? rawPluginConfig.refreshToken
+        : "";
+    const hasLegacyTokens = Boolean(legacyAccessToken || legacyRefreshToken);
+
+    if (hasLegacyTokens) {
+      const existingTokenFilePair = readTokenFile(cfg.tokenFile, api.logger);
+      const hasTokenFileValues = Boolean(
+        existingTokenFilePair.accessToken || existingTokenFilePair.refreshToken,
+      );
+
+      Promise.resolve()
+        .then(() => {
+          if (!hasTokenFileValues) {
+            writeTokenFile(cfg.tokenFile, {
+              accessToken: legacyAccessToken,
+              refreshToken: legacyRefreshToken,
+            });
+          }
+          return upsertPluginConfig({
+            apiUrl: cfg.apiUrl,
+            clientId: cfg.clientId,
+            tokenFile: cfg.tokenFile,
+            accessToken: "",
+            refreshToken: "",
+          });
+        })
+        .then(() => {
+          api.logger.info(
+            "membase: migrated legacy OAuth tokens to token file",
+          );
+        })
+        .catch((err) =>
+          api.logger.error(
+            "membase: failed to migrate legacy OAuth tokens",
+            err,
+          ),
+        );
+    }
 
     const client = new MembaseClient(
       cfg.apiUrl.replace(/\/$/, ""),
@@ -29,17 +75,17 @@ export default {
         debug: cfg.debug,
         logger: api.logger,
         onTokenRefresh: (tokens) => {
-          upsertPluginConfig({
-            apiUrl: cfg.apiUrl,
-            clientId: cfg.clientId,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-          }).catch((err) =>
+          try {
+            writeTokenFile(cfg.tokenFile, {
+              accessToken: tokens.accessToken,
+              refreshToken: tokens.refreshToken,
+            });
+          } catch (err) {
             api.logger.error(
               "membase: failed to persist refreshed tokens",
               err,
-            ),
-          );
+            );
+          }
         },
       },
     );
