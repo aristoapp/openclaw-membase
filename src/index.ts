@@ -60,8 +60,9 @@ function readRawPluginConfigFromDisk(
     const entry = asObject(entries["openclaw-membase"]);
     return asObject(entry.config);
   } catch (error) {
-    logger.warn(`membase: failed to read ${configPath} during token migration`);
-    logger.warn(error);
+    logger.warn(
+      `membase: failed to read ${configPath} during token migration: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return {};
   }
 }
@@ -174,6 +175,24 @@ export default {
     if (!client.isAuthenticated()) {
       api.logger.warn(
         "membase: missing valid OAuth tokens. Run 'openclaw membase login' to re-authenticate.",
+      );
+      let noticeDelivered = false;
+      api.on(
+        "before_agent_start",
+        () => {
+          if (noticeDelivered) return {};
+          noticeDelivered = true;
+          return {
+            prependContext:
+              "<membase-notice>\n" +
+              "Membase long-term memory is disconnected — OAuth tokens are missing or invalid. " +
+              "Inform the user exactly once at the start of this conversation: " +
+              "\"Membase memory is not connected. Run 'openclaw membase login' in your terminal to reconnect.\" " +
+              "Do not repeat this notice.\n" +
+              "</membase-notice>",
+          };
+        },
+        { priority: 10 },
       );
       registerCli(api, client);
       return;
