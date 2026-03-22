@@ -1,6 +1,15 @@
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { MembaseClient } from "./client";
 import { registerCli, upsertPluginConfig } from "./commands/cli";
-import { parseConfig, readTokenFile, writeTokenFile } from "./config";
+import {
+  isRedactedTokenValue,
+  parseConfig,
+  readTokenFile,
+  resolveTokenFilePath,
+  writeTokenFile,
+} from "./config";
 import { flushAllBuffers, registerCaptureHook } from "./hooks/capture";
 import { registerRecallHook } from "./hooks/recall";
 import { registerForgetTool } from "./tools/forget";
@@ -8,6 +17,54 @@ import { registerProfileTool } from "./tools/profile";
 import { registerSearchTool } from "./tools/search";
 import { registerStoreTool } from "./tools/store";
 import type { OpenClawPluginApi } from "./types";
+
+type TokenPair = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function hasTokenValues(tokens: TokenPair): boolean {
+  return Boolean(tokens.accessToken || tokens.refreshToken);
+}
+
+function normalizeLegacyTokenValue(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return isRedactedTokenValue(value) ? "" : value;
+}
+
+function readTokensFromConfigObject(
+  config: Record<string, unknown>,
+): TokenPair {
+  return {
+    accessToken: normalizeLegacyTokenValue(config.accessToken),
+    refreshToken: normalizeLegacyTokenValue(config.refreshToken),
+  };
+}
+
+function readRawPluginConfigFromDisk(
+  logger: OpenClawPluginApi["logger"],
+): Record<string, unknown> {
+  const configPath = join(homedir(), ".openclaw", "openclaw.json");
+  try {
+    const root = asObject(JSON.parse(readFileSync(configPath, "utf-8")));
+    const plugins = asObject(root.plugins);
+    const entries = asObject(plugins.entries);
+    const entry = asObject(entries["openclaw-membase"]);
+    return asObject(entry.config);
+  } catch (error) {
+    logger.warn(`membase: failed to read ${configPath} during token migration`);
+    logger.warn(error);
+    return {};
+  }
+}
 
 export default {
   id: "openclaw-membase",
@@ -17,48 +74,72 @@ export default {
 
   register(api: OpenClawPluginApi) {
     const rawPluginConfig = api.pluginConfig ?? {};
+    const tokenFile = resolveTokenFilePath(rawPluginConfig);
+    const pluginConfigTokens = readTokensFromConfigObject(rawPluginConfig);
+    const hasLegacyTokenValues = hasTokenValues(pluginConfigTokens);
+    const hasRedactedLegacyTokens =
+      isRedactedTokenValue(rawPluginConfig.accessToken) ||
+      isRedactedTokenValue(rawPluginConfig.refreshToken);
+
+    let shouldClearLegacyTokens = false;
+    if (hasLegacyTokenValues || hasRedactedLegacyTokens) {
+      const tokenFilePair = readTokenFile(tokenFile, api.logger);
+      if (hasTokenValues(tokenFilePair)) {
+        shouldClearLegacyTokens = true;
+      } else {
+        let recoveredTokens = pluginConfigTokens;
+        if (
+          !recoveredTokens.accessToken ||
+          !recoveredTokens.refreshToken ||
+          hasRedactedLegacyTokens
+        ) {
+          const diskConfigTokens = readTokensFromConfigObject(
+            readRawPluginConfigFromDisk(api.logger),
+          );
+          recoveredTokens = {
+            accessToken:
+              recoveredTokens.accessToken || diskConfigTokens.accessToken,
+            refreshToken:
+              recoveredTokens.refreshToken || diskConfigTokens.refreshToken,
+          };
+        }
+
+        if (hasTokenValues(recoveredTokens)) {
+          writeTokenFile(tokenFile, recoveredTokens);
+          shouldClearLegacyTokens = true;
+          api.logger.info(
+            "membase: migrated legacy OAuth tokens to token file",
+          );
+        } else {
+          api.logger.warn(
+            hasRedactedLegacyTokens
+              ? "membase: legacy tokens are redacted and no recoverable token was found. Keeping existing plugin config; run 'openclaw membase login' once to repair."
+              : "membase: no recoverable legacy tokens found during migration. Keeping existing plugin config unchanged.",
+          );
+        }
+      }
+    }
+
     const cfg = parseConfig(rawPluginConfig, api.logger);
-
-    const legacyAccessToken =
-      typeof rawPluginConfig.accessToken === "string"
-        ? rawPluginConfig.accessToken
-        : "";
-    const legacyRefreshToken =
-      typeof rawPluginConfig.refreshToken === "string"
-        ? rawPluginConfig.refreshToken
-        : "";
-    const hasLegacyTokens = Boolean(legacyAccessToken || legacyRefreshToken);
-
-    if (hasLegacyTokens) {
-      const existingTokenFilePair = readTokenFile(cfg.tokenFile, api.logger);
-      const hasTokenFileValues = Boolean(
-        existingTokenFilePair.accessToken || existingTokenFilePair.refreshToken,
-      );
-
+    if (shouldClearLegacyTokens) {
       Promise.resolve()
-        .then(() => {
-          if (!hasTokenFileValues) {
-            writeTokenFile(cfg.tokenFile, {
-              accessToken: legacyAccessToken,
-              refreshToken: legacyRefreshToken,
-            });
-          }
-          return upsertPluginConfig({
+        .then(() =>
+          upsertPluginConfig({
             apiUrl: cfg.apiUrl,
             clientId: cfg.clientId,
             tokenFile: cfg.tokenFile,
             accessToken: "",
             refreshToken: "",
-          });
-        })
+          }),
+        )
         .then(() => {
           api.logger.info(
-            "membase: migrated legacy OAuth tokens to token file",
+            "membase: cleared legacy OAuth tokens from plugin config",
           );
         })
         .catch((err) =>
           api.logger.error(
-            "membase: failed to migrate legacy OAuth tokens",
+            "membase: failed to clear legacy OAuth tokens from plugin config",
             err,
           ),
         );
@@ -92,7 +173,7 @@ export default {
 
     if (!client.isAuthenticated()) {
       api.logger.warn(
-        "membase: missing OAuth tokens. Run 'openclaw membase login'.",
+        "membase: missing valid OAuth tokens. Run 'openclaw membase login' to re-authenticate.",
       );
       registerCli(api, client);
       return;

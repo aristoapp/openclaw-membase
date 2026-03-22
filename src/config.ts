@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import type { MembasePluginConfig, OpenClawPluginApi } from "./types";
 
 const DEFAULT_API_URL = "https://api.membase.so";
+export const REDACTED_TOKEN_SENTINEL = "__OPENCLAW_REDACTED__";
 const DEFAULT_TOKEN_FILE_PATH = join(
   homedir(),
   ".openclaw",
@@ -33,6 +34,17 @@ function str(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
 
+export function isRedactedTokenValue(value: unknown): boolean {
+  return typeof value === "string" && value === REDACTED_TOKEN_SENTINEL;
+}
+
+function normalizeTokenValue(value: unknown): string {
+  if (isRedactedTokenValue(value)) {
+    return "";
+  }
+  return str(value, "");
+}
+
 function expandHomePath(inputPath: string): string {
   if (inputPath === "~") return homedir();
   if (inputPath.startsWith("~/")) {
@@ -48,8 +60,8 @@ function asTokenPair(value: unknown): TokenPair {
 
   const obj = value as Record<string, unknown>;
   return {
-    accessToken: str(obj.accessToken, ""),
-    refreshToken: str(obj.refreshToken, ""),
+    accessToken: normalizeTokenValue(obj.accessToken),
+    refreshToken: normalizeTokenValue(obj.refreshToken),
   };
 }
 
@@ -66,7 +78,19 @@ export function readTokenFile(
 ): TokenPair {
   try {
     const raw = readFileSync(tokenFile, "utf-8");
-    return asTokenPair(JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    if (
+      logger &&
+      parsed &&
+      typeof parsed === "object" &&
+      (isRedactedTokenValue((parsed as Record<string, unknown>).accessToken) ||
+        isRedactedTokenValue((parsed as Record<string, unknown>).refreshToken))
+    ) {
+      logger.warn(
+        "membase: redacted token marker found in token file; treating as missing tokens",
+      );
+    }
+    return asTokenPair(parsed);
   } catch (error) {
     if (
       error &&
@@ -124,8 +148,10 @@ export function parseConfig(
       DEFAULT_API_URL,
     clientId: str(pluginConfig.clientId, ""),
     tokenFile,
-    accessToken: fileTokens.accessToken || str(pluginConfig.accessToken, ""),
-    refreshToken: fileTokens.refreshToken || str(pluginConfig.refreshToken, ""),
+    accessToken:
+      fileTokens.accessToken || normalizeTokenValue(pluginConfig.accessToken),
+    refreshToken:
+      fileTokens.refreshToken || normalizeTokenValue(pluginConfig.refreshToken),
     autoRecall: (pluginConfig.autoRecall as boolean) ?? true,
     autoCapture: (pluginConfig.autoCapture as boolean) ?? true,
     maxRecallChars: Math.max(
