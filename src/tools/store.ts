@@ -12,11 +12,12 @@ export function registerStoreTool(
     label: "Store in Membase",
     description:
       "Store long-term memory (persistent across sessions). " +
-      "ALWAYS call this tool when the user explicitly asks to remember/save/store something. " +
-      "Use proactively when the user shares durable user-specific context worth remembering, " +
-      "even if they do not explicitly ask — especially preferences, recurring patterns/habits, " +
-      "and ongoing constraints/goals/projects. " +
-      "Avoid storing transient one-off states/events unless the user explicitly asks. " +
+      "ALWAYS call this tool immediately when the user explicitly asks to save, remember, " +
+      "store, or record something. Do NOT assume auto-capture will handle it — auto-capture " +
+      "is delayed and unreliable for explicit requests. Call this tool first, then respond. " +
+      "Also call proactively when the user shares durable context worth remembering " +
+      "(preferences, habits, goals, ongoing projects) even without an explicit request. " +
+      "Avoid storing transient one-off states unless the user explicitly asks. " +
       "If previously stored information needs correction, store the corrected version as a new memory.",
     parameters: {
       type: "object",
