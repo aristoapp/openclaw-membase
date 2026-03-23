@@ -18,6 +18,18 @@ const HEARTBEAT_CONTROL_PATTERNS = [
   /\bcheck\s+heartbeat\.md\b/i,
 ];
 
+// OpenClaw inserts transient status messages into the conversation while hooks
+// or the agent are running. These should never be stored as memories.
+// Patterns handle both ASCII "..." and Unicode ellipsis "…" variants.
+const OPENCLAW_STATUS_PATTERNS = [
+  /^processing[.…]{0,3}$/i,
+  /^thinking[.…]{0,3}$/i,
+  /^loading[.…]{0,3}$/i,
+  /^working[.…]{0,3}$/i,
+  /^please wait[.…]{0,3}$/i,
+  /^generating[.…]{0,3}$/i,
+];
+
 interface BufferedMessage {
   role: "user" | "assistant";
   text: string;
@@ -27,6 +39,11 @@ const messageBuffers = new Map<string, BufferedMessage[]>();
 const silenceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function getChannelKey(event: Record<string, unknown>): string {
+  // Prefer the top-level sessionKey added in openclaw PR #44348.
+  // Fall back to the legacy session object shape, then to "default".
+  if (typeof event.sessionKey === "string" && event.sessionKey) {
+    return event.sessionKey;
+  }
   const session = event.session as Record<string, unknown> | undefined;
   return (session?.channelId as string) || (session?.id as string) || "default";
 }
@@ -43,11 +60,17 @@ function getLastTurn(messages: unknown[]): unknown[] {
   return lastUserIdx >= 0 ? messages.slice(lastUserIdx) : messages;
 }
 
-function isOperationalMessage(text: string): boolean {
+function isOperationalMessage(
+  role: "user" | "assistant",
+  text: string,
+): boolean {
   const trimmed = text.trim();
   if (!trimmed) return true;
   if (UNTRUSTED_METADATA_BLOCK_RE.test(trimmed)) return true;
-  return HEARTBEAT_CONTROL_PATTERNS.some((pattern) => pattern.test(trimmed));
+  if (HEARTBEAT_CONTROL_PATTERNS.some((p) => p.test(trimmed))) return true;
+  // OpenClaw transient status messages are assistant-side placeholders.
+  if (role !== "assistant") return false;
+  return OPENCLAW_STATUS_PATTERNS.some((p) => p.test(trimmed));
 }
 
 async function flushBuffer(
@@ -116,7 +139,7 @@ export function registerCaptureHook(
 
         let text = extractTextContent(m.content);
         text = text.replace(CONTEXT_TAG_RE, "").trim();
-        if (isOperationalMessage(text)) continue;
+        if (isOperationalMessage(role as "user" | "assistant", text)) continue;
         if (text.length >= 10) {
           newMessages.push({ role: role as "user" | "assistant", text });
         }

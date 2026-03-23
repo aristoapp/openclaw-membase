@@ -1,4 +1,10 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { MembasePluginConfig, OpenClawPluginApi } from "./types";
@@ -120,7 +126,14 @@ export function readTokenFile(
 
 export function writeTokenFile(tokenFile: string, tokens: TokenPair): void {
   const dir = dirname(tokenFile);
-  mkdirSync(dir, { recursive: true });
+  // 0o700: only the owner can list/access the credentials directory
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  // Existing directories keep prior permissions; tighten them best-effort.
+  try {
+    chmodSync(dir, 0o700);
+  } catch {
+    // Ignore platform-specific permission limitations (e.g. Windows ACLs).
+  }
   const tempPath = `${tokenFile}.tmp`;
   const payload = JSON.stringify(
     {
@@ -130,8 +143,15 @@ export function writeTokenFile(tokenFile: string, tokens: TokenPair): void {
     null,
     2,
   );
-  writeFileSync(tempPath, `${payload}\n`, "utf-8");
+  // 0o600: only the owner can read/write the token file
+  writeFileSync(tempPath, `${payload}\n`, { encoding: "utf-8", mode: 0o600 });
   renameSync(tempPath, tokenFile);
+  // Best-effort hardening in case the target existed with broader perms.
+  try {
+    chmodSync(tokenFile, 0o600);
+  } catch {
+    // Ignore platform-specific permission limitations.
+  }
 }
 
 export function parseConfig(

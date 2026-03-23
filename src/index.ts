@@ -84,6 +84,7 @@ export default {
     // move to the safe credentials/ location before doing anything else.
     const configuredTokenFile = resolveTokenFilePath(rawPluginConfig);
     let effectiveTokenFile = configuredTokenFile;
+    let pathMigrationPromise: Promise<void> | null = null;
 
     if (isInsideExtensionsDir(configuredTokenFile)) {
       effectiveTokenFile = DEFAULT_TOKEN_FILE_PATH;
@@ -106,14 +107,16 @@ export default {
 
       // Update tokenFile in openclaw.json asynchronously so next boot uses the
       // safe path directly (no migration needed again).
-      Promise.resolve()
-        .then(() => upsertPluginConfig({ tokenFile: effectiveTokenFile }))
-        .catch((err) =>
-          api.logger.error(
-            "membase: failed to update tokenFile path in plugin config",
-            err,
-          ),
-        );
+      // NOTE: stored in a variable so the legacy-token clear below can chain
+      // onto it and avoid a read/write race on openclaw.json.
+      pathMigrationPromise = upsertPluginConfig({
+        tokenFile: effectiveTokenFile,
+      }).catch((err) =>
+        api.logger.error(
+          "membase: failed to update tokenFile path in plugin config",
+          err,
+        ),
+      );
     }
     // ────────────────────────────────────────────────────────────────────────
 
@@ -157,11 +160,18 @@ export default {
         }
 
         if (hasTokenValues(recoveredTokens)) {
-          writeTokenFile(tokenFile, recoveredTokens);
-          shouldClearLegacyTokens = true;
-          api.logger.info(
-            "membase: migrated legacy OAuth tokens to token file",
-          );
+          try {
+            writeTokenFile(tokenFile, recoveredTokens);
+            shouldClearLegacyTokens = true;
+            api.logger.info(
+              "membase: migrated legacy OAuth tokens to token file",
+            );
+          } catch (err) {
+            shouldClearLegacyTokens = false;
+            api.logger.warn(
+              `membase: failed to persist migrated tokens; keeping plugin config unchanged: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
         } else {
           api.logger.warn(
             hasRedactedLegacyTokens
@@ -174,7 +184,9 @@ export default {
 
     const cfg = parseConfig(effectivePluginConfig, api.logger);
     if (shouldClearLegacyTokens) {
-      Promise.resolve()
+      // Chain onto the path-migration write (if any) to avoid a race condition
+      // where both calls read openclaw.json before either has finished writing.
+      (pathMigrationPromise ?? Promise.resolve())
         .then(() =>
           upsertPluginConfig({
             apiUrl: cfg.apiUrl,

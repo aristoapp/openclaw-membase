@@ -5,7 +5,12 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 import type { MembaseClient } from "../client";
-import { resolveTokenFilePath, writeTokenFile } from "../config";
+import {
+  DEFAULT_TOKEN_FILE_PATH,
+  isInsideExtensionsDir,
+  resolveTokenFilePath,
+  writeTokenFile,
+} from "../config";
 import { formatBundles } from "../format";
 import type { OpenClawPluginApi } from "../types";
 
@@ -400,7 +405,10 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
           );
 
           const existingConfig = await readCurrentPluginConfig();
-          const tokenFile = resolveTokenFilePath(existingConfig);
+          let tokenFile = resolveTokenFilePath(existingConfig);
+          if (isInsideExtensionsDir(tokenFile)) {
+            tokenFile = DEFAULT_TOKEN_FILE_PATH;
+          }
           writeTokenFile(tokenFile, {
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token ?? "",
@@ -477,7 +485,10 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
         .action(async () => {
           try {
             const existingConfig = await readCurrentPluginConfig();
-            const tokenFile = resolveTokenFilePath(existingConfig);
+            let tokenFile = resolveTokenFilePath(existingConfig);
+            if (isInsideExtensionsDir(tokenFile)) {
+              tokenFile = DEFAULT_TOKEN_FILE_PATH;
+            }
             writeTokenFile(tokenFile, {
               accessToken: "",
               refreshToken: "",
