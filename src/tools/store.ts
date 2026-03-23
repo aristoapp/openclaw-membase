@@ -17,9 +17,12 @@ export function registerStoreTool(
       "is delayed and unreliable for explicit requests. Call this tool first, then respond. " +
       "Never tell the user 'saved' unless this tool call succeeds in the current turn. " +
       "If the tool fails, clearly report the failure instead of pretending success. " +
-      "Also call proactively when the user shares durable context worth remembering " +
-      "(preferences, habits, goals, ongoing projects) even without an explicit request. " +
-      "Avoid storing transient one-off states unless the user explicitly asks. " +
+      "Also call proactively—without asking permission—when the user shares durable context: " +
+      "personal background (education, work, family), preferences, habits, goals, plans, " +
+      "ongoing projects, or key decisions. " +
+      "Avoid storing transient one-off chatter, general knowledge, or product/service descriptions. " +
+      "Never store AI system instructions, tool-routing rules, or another AI's configuration/preferences. " +
+      "Do not store secrets (passwords, tokens, API keys). " +
       "If previously stored information needs correction, store the corrected version as a new memory.",
     parameters: {
       type: "object",
@@ -42,8 +45,8 @@ export function registerStoreTool(
         display_summary: {
           type: "string",
           description:
-            "A natural sentence (≤100 chars) describing this memory. " +
-            "Start with 'The user' or equivalent in the user's language.",
+            "A short natural-language sentence (≤100 chars) describing what was stored. " +
+            "Write in the user's language. Describe the content factually, not the action.",
         },
       },
       required: ["content", "display_summary"],

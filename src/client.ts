@@ -156,15 +156,19 @@ export class MembaseClient {
     query: string,
     limit = 10,
     offset?: number,
+    dateFrom?: string,
+    dateTo?: string,
+    timezone?: string,
   ): Promise<EpisodeBundle[]> {
     const qs = new URLSearchParams({
       query,
       limit: String(limit),
       format: "bundles",
     });
-    if (offset !== undefined) {
-      qs.set("offset", String(offset));
-    }
+    if (offset !== undefined) qs.set("offset", String(offset));
+    if (dateFrom) qs.set("date_from", dateFrom);
+    if (dateTo) qs.set("date_to", dateTo);
+    if (timezone) qs.set("timezone", timezone);
     const data = await this.request<{ episodes: EpisodeBundle[] }>(
       `/memory/search?${qs.toString()}`,
     );

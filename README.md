@@ -77,7 +77,7 @@ The agent uses these tools autonomously during conversations:
 
 | Tool | Description |
 | --- | --- |
-| `membase_search` | Search memories by semantic similarity. Returns episode bundles with related facts. |
+| `membase_search` | Search memories by semantic similarity. Supports date filtering (`date_from`, `date_to`, `timezone`). Returns episode bundles with related facts. |
 | `membase_store` | Save important information to long-term memory. Proactively stores preferences, goals, and context. |
 | `membase_forget` | Delete a memory. Shows matches first, then deletes after user confirmation (two-step). |
 | `membase_profile` | Retrieve user profile and related memories for session context. |
@@ -109,13 +109,15 @@ Legacy keys (`accessToken`, `refreshToken`) are migrated automatically when pres
 
 ### Enabling AI Tools
 
-If you use a named tools profile (e.g. `tools.profile: "coding"`), you need to add `openclaw-membase` to `tools.allow` so the AI can call `membase_search`, `membase_store`, and other Membase tools directly:
+The plugin automatically adds itself to `tools.alsoAllow` on first load. If it doesn't take effect, restart the gateway once.
+
+If you prefer to configure it manually, use `tools.alsoAllow` (not `tools.allow`) to avoid breaking your existing profile allowlist:
 
 ```json
 {
   "tools": {
     "profile": "coding",
-    "allow": ["openclaw-membase"]
+    "alsoAllow": ["openclaw-membase"]
   },
   "plugins": {
     "entries": {
@@ -132,7 +134,7 @@ If you use a named tools profile (e.g. `tools.profile: "coding"`), you need to a
 }
 ```
 
-`"openclaw-membase"` in `tools.allow` expands to all tools registered by this plugin. Without this, the AI still receives memory context via auto-recall but cannot call the tools explicitly.
+`"openclaw-membase"` in `tools.alsoAllow` expands to all tools registered by this plugin and is appended on top of the active profile. Using `tools.allow` instead can silently break your profile allowlist if the plugin ID is not yet recognized at parse time. Without this entry, the AI still receives memory context via auto-recall but cannot call the tools explicitly.
 
 ## How Membase Differs
 

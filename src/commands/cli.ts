@@ -65,6 +65,7 @@ async function openAuthUrl(
     const result = spawnSync(opener, [url], { stdio: "ignore" });
     exitCode = result.status;
   }
+
   if (exitCode !== 0) {
     logger.info(
       "Could not open browser automatically. Open this URL manually:",
