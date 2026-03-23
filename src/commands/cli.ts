@@ -278,8 +278,10 @@ export async function ensureToolsAllowlist(): Promise<boolean> {
   const profile = tools.profile;
   if (!profile || profile === "full") return false;
 
-  const allow = Array.isArray(tools.allow) ? [...tools.allow] : [];
-  const alsoAllow = Array.isArray(tools.alsoAllow) ? [...tools.alsoAllow] : [];
+  const allow = Array.isArray(tools.allow) ? (tools.allow as string[]) : [];
+  const alsoAllow = Array.isArray(tools.alsoAllow)
+    ? [...(tools.alsoAllow as string[])]
+    : [];
 
   const alreadyPresent =
     allow.includes(PLUGIN_ID) ||
@@ -289,8 +291,12 @@ export async function ensureToolsAllowlist(): Promise<boolean> {
 
   if (alreadyPresent) return false;
 
-  allow.push(PLUGIN_ID);
-  tools.allow = allow;
+  // Use alsoAllow (additive) rather than allow (restrictive).
+  // tools.allow with unknown plugin IDs is silently dropped by OpenClaw;
+  // tools.alsoAllow appends on top of the active profile and is safe to
+  // include before the plugin is fully loaded.
+  alsoAllow.push(PLUGIN_ID);
+  tools.alsoAllow = alsoAllow;
   root.tools = tools;
 
   await writeFile(configPath, `${JSON.stringify(root, null, 2)}\n`, "utf-8");
