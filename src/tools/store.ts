@@ -12,6 +12,7 @@ export function registerStoreTool(
     label: "Store in Membase",
     description:
       "Store long-term memory (persistent across sessions). " +
+      "ALWAYS call this tool when the user explicitly asks to remember/save/store something. " +
       "Use proactively when the user shares durable user-specific context worth remembering, " +
       "even if they do not explicitly ask — especially preferences, recurring patterns/habits, " +
       "and ongoing constraints/goals/projects. " +
@@ -25,6 +26,7 @@ export function registerStoreTool(
           maxLength: MAX_CONTENT_LENGTH,
           description:
             "Long-term memory content (persistent across sessions). " +
+            "If the user explicitly asks to save something, pass the user-confirmed fact here verbatim. " +
             "Store durable user context such as preferences, background, " +
             "recurring patterns/habits, goals/plans, ongoing projects, constraints, " +
             "and stable technical context. " +

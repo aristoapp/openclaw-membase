@@ -1,7 +1,12 @@
 import type { MembaseClient } from "../client";
 import { formatBundle } from "../format";
 import type { MembasePluginConfig, OpenClawPluginApi } from "../types";
-import { extractLastUserMessage, isCasualChat, withTimeout } from "../utils";
+import {
+  extractLastUserMessage,
+  isCasualChat,
+  sanitizeRecallQuery,
+  withTimeout,
+} from "../utils";
 
 const RECALL_INTRO =
   "The following is background context about the user from long-term memory. " +
@@ -24,12 +29,13 @@ export function registerRecallHook(
     "before_agent_start",
     async (event: Record<string, unknown>) => {
       try {
-        const userMessage = extractLastUserMessage(event);
-        if (!userMessage || userMessage.length < 30) return {};
+        const rawUserMessage = extractLastUserMessage(event);
+        const userMessage = sanitizeRecallQuery(rawUserMessage);
+        if (!userMessage || userMessage.length < 15) return {};
         if (isCasualChat(userMessage)) return {};
 
         const bundles = await withTimeout(
-          client.search(userMessage.slice(0, 500), 5),
+          client.search(userMessage, 5),
           RECALL_TIMEOUT_MS,
         );
         if (bundles.length === 0) return {};

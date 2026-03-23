@@ -42,6 +42,24 @@ const MEMORY_KEYWORDS = [
   "error",
 ];
 
+const METADATA_BLOCK_RE =
+  /(sender|conversation info)\s*\(untrusted metadata\):\s*(?:```json[\s\S]*?```|json\s*\{[\s\S]*?\})/gi;
+const MEMBASE_CONTEXT_BLOCK_RE =
+  /<membase-context>[\s\S]*?<\/membase-context>\s*/gi;
+const SIMPLE_TAG_RE = /<\/?final>/gi;
+const HEARTBEAT_NOISE_LINE_PATTERNS = [
+  /read heartbeat\.md if it exists \(workspace context\)/i,
+  /when reading heartbeat\.md, use workspace file/i,
+  /if nothing needs attention,\s*reply heartbeat_ok/i,
+  /do not infer or repeat old tasks from prior chats/i,
+  /^current time:/i,
+  /^gateway reconnected\b/i,
+  /^agent main \| session main \(heartbeat\)/i,
+  /^[-─]{8,}$/i,
+];
+const SECRET_ASSIGNMENT_RE =
+  /\b([A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*)\s*=\s*[^\s`]+/gi;
+
 function hasMemoryKeywords(text: string): boolean {
   return MEMORY_KEYWORDS.some((kw) => text.includes(kw));
 }
@@ -69,6 +87,32 @@ export function extractTextContent(content: unknown): string {
       .join("\n");
   }
   return "";
+}
+
+export function sanitizeMembaseText(raw: string): string {
+  let cleaned = raw;
+  cleaned = cleaned.replace(MEMBASE_CONTEXT_BLOCK_RE, " ");
+  cleaned = cleaned.replace(METADATA_BLOCK_RE, " ");
+  cleaned = cleaned.replace(SIMPLE_TAG_RE, " ");
+
+  const lines = cleaned
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter(
+      (line) =>
+        !HEARTBEAT_NOISE_LINE_PATTERNS.some((pattern) => pattern.test(line)),
+    );
+
+  return lines.join("\n").trim();
+}
+
+export function sanitizeRecallQuery(raw: string): string {
+  let cleaned = sanitizeMembaseText(raw);
+  cleaned = cleaned.replace(SECRET_ASSIGNMENT_RE, "$1=[REDACTED]");
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, " ");
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+  return cleaned.slice(0, 240);
 }
 
 export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
