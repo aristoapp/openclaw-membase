@@ -1,18 +1,50 @@
 import type { EpisodeBundle } from "./types";
 
-export function formatRelativeDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  try {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+const DAY_MS = 1000 * 60 * 60 * 24;
 
-    if (diffDays === 0) return "today";
-    if (diffDays === 1) return "yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function localDayStart(date: Date): number {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).getTime();
+}
+
+function dayDiffFromToday(date: Date): number {
+  const todayStart = localDayStart(new Date());
+  const targetStart = localDayStart(date);
+  return Math.round((targetStart - todayStart) / DAY_MS);
+}
+
+function isSameLocalDay(
+  lhs: string | null | undefined,
+  rhs: string | null | undefined,
+): boolean {
+  if (!lhs || !rhs) return false;
+  try {
+    return localDayStart(new Date(lhs)) === localDayStart(new Date(rhs));
+  } catch {
+    return false;
+  }
+}
+
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+
+  try {
+    const date = new Date(dateStr);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const exactDate = `${yyyy}-${mm}-${dd}`;
+
+    const diffDays = dayDiffFromToday(date);
+    let relative = "";
+    if (diffDays === 0) relative = " (today)";
+    else if (diffDays === -1) relative = " (yesterday)";
+    else if (diffDays === 1) relative = " (tomorrow)";
+
+    return `${exactDate}${relative}`;
   } catch {
     return "";
   }
@@ -21,12 +53,23 @@ export function formatRelativeDate(dateStr: string | null | undefined): string {
 export function formatBundle(bundle: EpisodeBundle, index: number): string {
   const ep = bundle.episode;
   const name = ep.name || ep.summary || "(untitled)";
-  const date = formatRelativeDate(ep.created_at ?? ep.valid_at);
-  const source = ep.source ? ` (source: ${ep.source})` : "";
-  const dateTag = date ? `[${date}] ` : "";
+  const eventDate = formatDate(ep.valid_at);
+  const capturedDate = formatDate(ep.created_at);
+  const dateParts: string[] = [];
 
-  const lines: string[] = [];
-  lines.push(`${index + 1}. ${dateTag}${name}${source}`);
+  if (eventDate) {
+    dateParts.push(`event: ${eventDate}`);
+  }
+  if (
+    capturedDate &&
+    (!eventDate || !isSameLocalDay(ep.valid_at, ep.created_at))
+  ) {
+    dateParts.push(`captured: ${capturedDate}`);
+  }
+
+  const dateTag = dateParts.length > 0 ? `[${dateParts.join(", ")}] ` : "";
+
+  const lines: string[] = [`${index + 1}. ${dateTag}${name}`];
 
   if (ep.summary && ep.summary !== ep.name) {
     lines.push(`   ${ep.summary}`);
