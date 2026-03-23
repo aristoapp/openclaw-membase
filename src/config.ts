@@ -171,10 +171,7 @@ export function parseConfig(
   const fileTokens = readTokenFile(tokenFile, logger);
 
   return {
-    apiUrl:
-      str(pluginConfig.apiUrl, "") ||
-      process.env.MEMBASE_API_URL ||
-      DEFAULT_API_URL,
+    apiUrl: str(pluginConfig.apiUrl, "") || DEFAULT_API_URL,
     clientId: str(pluginConfig.clientId, ""),
     tokenFile,
     accessToken:

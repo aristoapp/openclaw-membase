@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { homedir } from "node:os";
@@ -52,10 +51,13 @@ async function openAuthUrl(
     return;
   }
 
-  const result = spawnSync(opener, [url], {
-    stdio: "ignore",
+  const result = Bun.spawnSync({
+    cmd: [opener, url],
+    stdin: "ignore",
+    stdout: "ignore",
+    stderr: "ignore",
   });
-  if (result.status !== 0) {
+  if (result.exitCode !== 0) {
     logger.info(
       "Could not open browser automatically. Open this URL manually:",
     );

@@ -61,8 +61,7 @@ const SECRET_ASSIGNMENT_RE =
   /\b([A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*)\s*=\s*[^\s`]+/gi;
 // OpenClaw prepends a timestamp to every user message, e.g. "[Mon 2026-03-23 15:19 GMT+9] "
 const OPENCLAW_TIMESTAMP_PREFIX_RE =
-  /^\[[A-Za-z]{3}\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+GMT[+-]\d+\]\s*/;
-
+  /^\[[A-Za-z]{3}\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+GMT[+-]\d+\]\s*/gim;
 function hasMemoryKeywords(text: string): boolean {
   return MEMORY_KEYWORDS.some((kw) => text.includes(kw));
 }
@@ -94,6 +93,7 @@ export function extractTextContent(content: unknown): string {
 
 export function sanitizeMembaseText(raw: string): string {
   let cleaned = raw;
+  cleaned = cleaned.replace(OPENCLAW_TIMESTAMP_PREFIX_RE, " ");
   cleaned = cleaned.replace(MEMBASE_CONTEXT_BLOCK_RE, " ");
   cleaned = cleaned.replace(METADATA_BLOCK_RE, " ");
   cleaned = cleaned.replace(SIMPLE_TAG_RE, " ");
@@ -111,8 +111,7 @@ export function sanitizeMembaseText(raw: string): string {
 }
 
 export function sanitizeRecallQuery(raw: string): string {
-  let cleaned = raw.replace(OPENCLAW_TIMESTAMP_PREFIX_RE, "");
-  cleaned = sanitizeMembaseText(cleaned);
+  let cleaned = sanitizeMembaseText(raw);
   cleaned = cleaned.replace(SECRET_ASSIGNMENT_RE, "$1=[REDACTED]");
   cleaned = cleaned.replace(/```[\s\S]*?```/g, " ");
   cleaned = cleaned.replace(/\s+/g, " ").trim();

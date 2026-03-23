@@ -159,3 +159,4 @@ Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 ## License
 
 [MIT](./LICENSE)
+

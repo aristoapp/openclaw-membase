@@ -15,6 +15,8 @@ export function registerStoreTool(
       "ALWAYS call this tool immediately when the user explicitly asks to save, remember, " +
       "store, or record something. Do NOT assume auto-capture will handle it — auto-capture " +
       "is delayed and unreliable for explicit requests. Call this tool first, then respond. " +
+      "Never tell the user 'saved' unless this tool call succeeds in the current turn. " +
+      "If the tool fails, clearly report the failure instead of pretending success. " +
       "Also call proactively when the user shares durable context worth remembering " +
       "(preferences, habits, goals, ongoing projects) even without an explicit request. " +
       "Avoid storing transient one-off states unless the user explicitly asks. " +

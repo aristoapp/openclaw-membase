@@ -4,7 +4,7 @@ import { extractTextContent, sanitizeMembaseText } from "../utils";
 
 const SILENCE_TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_BUFFER_SIZE = 20;
-const MIN_MESSAGES_TO_FLUSH = 4;
+const MIN_MESSAGES_TO_FLUSH = 2;
 const HEARTBEAT_CONTROL_PATTERNS = [
   /^heartbeat$/i,
   /^heartbeat_ok$/i,
@@ -15,20 +15,7 @@ const HEARTBEAT_CONTROL_PATTERNS = [
   /\bcheck\s+heartbeat\.md\b/i,
 ];
 
-// OpenClaw inserts transient status messages into the conversation while hooks
-// or the agent are running. These should never be stored as memories.
-// Patterns handle both ASCII "..." and Unicode ellipsis "…" variants.
-const OPENCLAW_STATUS_PATTERNS = [
-  /^processing[.…]{0,3}$/i,
-  /^thinking[.…]{0,3}$/i,
-  /^loading[.…]{0,3}$/i,
-  /^working[.…]{0,3}$/i,
-  /^please wait[.…]{0,3}$/i,
-  /^generating[.…]{0,3}$/i,
-];
-
 interface BufferedMessage {
-  role: "user" | "assistant";
   text: string;
 }
 
@@ -57,25 +44,11 @@ function getLastTurn(messages: unknown[]): unknown[] {
   return lastUserIdx >= 0 ? messages.slice(lastUserIdx) : messages;
 }
 
-function isOperationalMessage(
-  role: "user" | "assistant",
-  text: string,
-): boolean {
+function isOperationalMessage(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return true;
   if (HEARTBEAT_CONTROL_PATTERNS.some((p) => p.test(trimmed))) return true;
-
-  const lines = trimmed
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length === 0) return true;
-  // OpenClaw transient status messages are assistant-side placeholders.
-  if (role !== "assistant") return false;
-  return lines.every((line) =>
-    OPENCLAW_STATUS_PATTERNS.some((p) => p.test(line)),
-  );
+  return false;
 }
 
 async function flushBuffer(
@@ -93,7 +66,7 @@ async function flushBuffer(
     return;
   }
 
-  const content = messages.map((m) => `[${m.role}]\n${m.text}`).join("\n\n");
+  const content = messages.map((m) => m.text).join("\n\n");
   if (content.length < 50) {
     messageBuffers.delete(channelKey);
     return;
@@ -143,14 +116,13 @@ export function registerCaptureHook(
       for (const msg of lastTurn) {
         const m = msg as Record<string, unknown> | undefined;
         if (!m) continue;
-        const role = m.role;
-        if (role !== "user" && role !== "assistant") continue;
+        if (m.role !== "user") continue;
 
         let text = extractTextContent(m.content);
         text = sanitizeMembaseText(text);
-        if (isOperationalMessage(role as "user" | "assistant", text)) continue;
+        if (isOperationalMessage(text)) continue;
         if (text.length >= 10) {
-          newMessages.push({ role: role as "user" | "assistant", text });
+          newMessages.push({ text });
         }
       }
 
