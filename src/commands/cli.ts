@@ -51,13 +51,21 @@ async function openAuthUrl(
     return;
   }
 
-  const result = Bun.spawnSync({
-    cmd: [opener, url],
-    stdin: "ignore",
-    stdout: "ignore",
-    stderr: "ignore",
-  });
-  if (result.exitCode !== 0) {
+  let exitCode: number | null;
+  if (typeof Bun !== "undefined") {
+    const result = Bun.spawnSync({
+      cmd: [opener, url],
+      stdin: "ignore",
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    exitCode = result.exitCode;
+  } else {
+    const { spawnSync } = await import("node:child_process");
+    const result = spawnSync(opener, [url], { stdio: "ignore" });
+    exitCode = result.status;
+  }
+  if (exitCode !== 0) {
     logger.info(
       "Could not open browser automatically. Open this URL manually:",
     );
