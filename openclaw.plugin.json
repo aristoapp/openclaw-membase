@@ -23,7 +23,7 @@
     },
     "tokenFile": {
       "label": "OAuth Token File",
-      "placeholder": "~/.openclaw/extensions/openclaw-membase/tokens.json",
+      "placeholder": "~/.openclaw/credentials/openclaw-membase.json",
       "advanced": true
     },
     "autoRecall": {

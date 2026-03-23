@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { MembaseClient } from "./client";
 import { registerCli, upsertPluginConfig } from "./commands/cli";
 import {
+  DEFAULT_TOKEN_FILE_PATH,
+  isInsideExtensionsDir,
   isRedactedTokenValue,
   parseConfig,
   readTokenFile,
@@ -75,8 +77,57 @@ export default {
 
   register(api: OpenClawPluginApi) {
     const rawPluginConfig = api.pluginConfig ?? {};
-    const tokenFile = resolveTokenFilePath(rawPluginConfig);
-    const pluginConfigTokens = readTokensFromConfigObject(rawPluginConfig);
+
+    // ── Token file path migration ────────────────────────────────────────────
+    // extensions/ is fully replaced on every plugin update/reinstall, so any
+    // token file stored there will be silently deleted. Detect that pattern and
+    // move to the safe credentials/ location before doing anything else.
+    const configuredTokenFile = resolveTokenFilePath(rawPluginConfig);
+    let effectiveTokenFile = configuredTokenFile;
+
+    if (isInsideExtensionsDir(configuredTokenFile)) {
+      effectiveTokenFile = DEFAULT_TOKEN_FILE_PATH;
+      const oldTokens = readTokenFile(configuredTokenFile, api.logger);
+
+      if (hasTokenValues(oldTokens)) {
+        // Old file still exists — copy it to the safe location before it vanishes.
+        try {
+          writeTokenFile(effectiveTokenFile, oldTokens);
+          api.logger.info(
+            `membase: moved token file from extensions/ to credentials/ (safe from updates)`,
+          );
+        } catch (err) {
+          api.logger.error(
+            "membase: failed to move token file to credentials/",
+            err,
+          );
+        }
+      }
+
+      // Update tokenFile in openclaw.json asynchronously so next boot uses the
+      // safe path directly (no migration needed again).
+      Promise.resolve()
+        .then(() => upsertPluginConfig({ tokenFile: effectiveTokenFile }))
+        .catch((err) =>
+          api.logger.error(
+            "membase: failed to update tokenFile path in plugin config",
+            err,
+          ),
+        );
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Inject the resolved (possibly migrated) tokenFile so all downstream
+    // reads use the safe path within this boot cycle.
+    const effectivePluginConfig = {
+      ...rawPluginConfig,
+      tokenFile: effectiveTokenFile,
+    };
+
+    const tokenFile = effectiveTokenFile;
+    const pluginConfigTokens = readTokensFromConfigObject(
+      effectivePluginConfig,
+    );
     const hasLegacyTokenValues = hasTokenValues(pluginConfigTokens);
     const hasRedactedLegacyTokens =
       isRedactedTokenValue(rawPluginConfig.accessToken) ||
@@ -121,7 +172,7 @@ export default {
       }
     }
 
-    const cfg = parseConfig(rawPluginConfig, api.logger);
+    const cfg = parseConfig(effectivePluginConfig, api.logger);
     if (shouldClearLegacyTokens) {
       Promise.resolve()
         .then(() =>

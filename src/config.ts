@@ -5,13 +5,22 @@ import type { MembasePluginConfig, OpenClawPluginApi } from "./types";
 
 const DEFAULT_API_URL = "https://api.membase.so";
 export const REDACTED_TOKEN_SENTINEL = "__OPENCLAW_REDACTED__";
-const DEFAULT_TOKEN_FILE_PATH = join(
+
+// Safe persistent location — outside extensions/ which is wiped on plugin update.
+export const DEFAULT_TOKEN_FILE_PATH = join(
   homedir(),
   ".openclaw",
-  "extensions",
-  "openclaw-membase",
-  "tokens.json",
+  "credentials",
+  "openclaw-membase.json",
 );
+
+// Returns true if a path is inside extensions/ — that directory is fully replaced
+// whenever openclaw plugins update/reinstall, so token files stored there will be lost.
+export function isInsideExtensionsDir(tokenFile: string): boolean {
+  const normalized = tokenFile.split("\\").join("/");
+  const extensionsMarker = "/.openclaw/extensions/";
+  return normalized.includes(extensionsMarker);
+}
 
 const KNOWN_KEYS = new Set([
   "apiUrl",
