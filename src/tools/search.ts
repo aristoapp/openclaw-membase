@@ -10,9 +10,11 @@ export function registerSearchTool(
     name: "membase_search",
     label: "Search Membase Memory",
     description:
-      "Search stored memories (persistent across sessions) by semantic similarity. " +
-      "Use when the user asks to recall something not present in the current conversation " +
-      "(especially across sessions), or proactively when past context would improve your response. " +
+      "Search long-term memory stored in Membase (persists across all sessions). " +
+      "ALWAYS call this tool when the user explicitly asks you to recall, look up, find, " +
+      "or retrieve something — even if the auto-injected context at session start did not " +
+      "include it. The startup context is a small recent sample; this tool searches the " +
+      "full memory store. Also call proactively when past context would improve your answer. " +
       "Returns episode-centric bundles (episodes with nearby nodes/edges).",
     parameters: {
       type: "object",
