@@ -107,8 +107,16 @@ All configuration is managed through OpenClaw's plugin settings or `~/.openclaw/
 OAuth login keeps stable plugin config in `~/.openclaw/openclaw.json` and stores rotating tokens in `tokenFile`.
 Legacy keys (`accessToken`, `refreshToken`) are migrated automatically when present.
 
+### Enabling AI Tools
+
+If you use a named tools profile (e.g. `tools.profile: "coding"`), you need to add `openclaw-membase` to `tools.allow` so the AI can call `membase_search`, `membase_store`, and other Membase tools directly:
+
 ```json
 {
+  "tools": {
+    "profile": "coding",
+    "allow": ["openclaw-membase"]
+  },
   "plugins": {
     "entries": {
       "openclaw-membase": {
@@ -123,6 +131,8 @@ Legacy keys (`accessToken`, `refreshToken`) are migrated automatically when pres
   }
 }
 ```
+
+`"openclaw-membase"` in `tools.allow` expands to all tools registered by this plugin. Without this, the AI still receives memory context via auto-recall but cannot call the tools explicitly.
 
 ## How Membase Differs
 

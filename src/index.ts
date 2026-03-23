@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { MembaseClient } from "./client";
-import { registerCli, upsertPluginConfig } from "./commands/cli";
+import {
+  ensureToolsAllowlist,
+  registerCli,
+  upsertPluginConfig,
+} from "./commands/cli";
 import {
   DEFAULT_TOKEN_FILE_PATH,
   isInsideExtensionsDir,
@@ -289,6 +293,16 @@ export default {
     }
 
     registerCli(api, client);
+
+    ensureToolsAllowlist()
+      .then((patched) => {
+        if (patched) {
+          api.logger.info(
+            "membase: added plugin to tools.allow (restart gateway to activate tools)",
+          );
+        }
+      })
+      .catch(() => {});
 
     api.registerService({
       id: "openclaw-membase",

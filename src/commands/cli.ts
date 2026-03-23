@@ -254,6 +254,41 @@ export async function upsertPluginConfig(
   await writeFile(configPath, `${JSON.stringify(root, null, 2)}\n`, "utf-8");
 }
 
+const PLUGIN_ID = "openclaw-membase";
+
+export async function ensureToolsAllowlist(): Promise<boolean> {
+  const configPath = getOpenClawConfigPath();
+
+  let root: JsonObject = {};
+  try {
+    root = asObject(JSON.parse(await readFile(configPath, "utf-8")));
+  } catch {
+    return false;
+  }
+
+  const tools = asObject(root.tools);
+  const profile = tools.profile;
+  if (!profile || profile === "full") return false;
+
+  const allow = Array.isArray(tools.allow) ? [...tools.allow] : [];
+  const alsoAllow = Array.isArray(tools.alsoAllow) ? [...tools.alsoAllow] : [];
+
+  const alreadyPresent =
+    allow.includes(PLUGIN_ID) ||
+    allow.includes("group:plugins") ||
+    alsoAllow.includes(PLUGIN_ID) ||
+    alsoAllow.includes("group:plugins");
+
+  if (alreadyPresent) return false;
+
+  allow.push(PLUGIN_ID);
+  tools.allow = allow;
+  root.tools = tools;
+
+  await writeFile(configPath, `${JSON.stringify(root, null, 2)}\n`, "utf-8");
+  return true;
+}
+
 async function readCurrentPluginConfig(): Promise<JsonObject> {
   const configPath = getOpenClawConfigPath();
   try {
