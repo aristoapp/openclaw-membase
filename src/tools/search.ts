@@ -13,11 +13,12 @@ export function registerSearchTool(
       "Search stored memories (persistent across sessions) by semantic similarity. " +
       "Call when the user asks to recall something not present in the current conversation, " +
       "or proactively when past context would improve your response. " +
-      "Use a single focused natural-language phrase — do NOT list keywords. " +
-      "For broad questions, call this tool multiple times with different angles " +
+      "IMPORTANT — date ranges: when the user specifies a date or range (e.g. 'Feb 2–19', 'last week', 'today'), " +
+      "you MUST set date_from and date_to as ISO 8601 dates. " +
+      "Do NOT embed the date in the query text — the query should describe WHAT to look for, not WHEN. " +
+      "Example: user asks '2월 2일~19일 일정' → query='schedule meetings appointments', date_from='2026-02-02', date_to='2026-02-19T23:59:59'. " +
+      "For broad topic questions without a date, call this tool multiple times with different angles " +
       "(e.g. 'meetings with Mashup Ventures', then 'emails from Mashup Ventures'). " +
-      "When the user mentions a time window (today, yesterday, this week, a date range), " +
-      "set date_from and/or date_to as ISO 8601. " +
       "Returns episode-centric bundles (episodes with nearby nodes/edges).",
     parameters: {
       type: "object",
