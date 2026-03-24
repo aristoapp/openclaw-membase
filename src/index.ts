@@ -270,21 +270,6 @@ export default {
     registerProfileTool(api, client);
     registerForgetTool(api, client);
 
-    api.on(
-      "before_agent_start",
-      () => ({
-        prependContext:
-          "<membase-policy>\n" +
-          "You have access to Membase, a long-term memory that persists across sessions.\n" +
-          "USE membase_search whenever the user asks about past context, schedules, preferences, people, projects, or anything that might be stored in memory. " +
-          "Do NOT use exec, read, or filesystem tools to look up user information — always prefer membase_search.\n" +
-          "USE membase_store when the user explicitly asks to save/remember/store information. " +
-          "Never claim saved unless the tool call succeeds in the current turn.\n" +
-          "</membase-policy>",
-      }),
-      { priority: 20 },
-    );
-
     if (cfg.autoRecall) {
       registerRecallHook(api, client, cfg);
     }

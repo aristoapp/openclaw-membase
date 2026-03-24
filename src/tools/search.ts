@@ -35,7 +35,8 @@ export function registerSearchTool(
         limit: {
           type: "number",
           description:
-            "Max results to return (default: 10, max: 30). Use offset to paginate.",
+            "Max results to return (default: 20, max: 30). " +
+            "Use 20-30 for comprehensive timeline/date-range answers. Use offset to paginate.",
         },
         offset: {
           type: "number",
@@ -77,7 +78,7 @@ export function registerSearchTool(
       try {
         const bundles = await client.search(
           params.query,
-          params.limit ?? 10,
+          params.limit ?? 20,
           params.offset,
           params.date_from,
           params.date_to,

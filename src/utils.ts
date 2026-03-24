@@ -75,8 +75,6 @@ export function isCasualChat(text: string): boolean {
     if (pattern.test(lower)) return true;
   }
 
-  if (lower.length < 40) return true;
-
   return false;
 }
 

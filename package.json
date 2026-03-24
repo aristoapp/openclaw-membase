@@ -1,6 +1,6 @@
 {
   "name": "@membase/openclaw-membase",
-  "version": "0.3.19",
+  "version": "0.3.20",
   "main": "./index.ts",
   "description": "Membase plugin for OpenClaw — persistent long-term memory for AI agents",
   "type": "module",
@@ -13,6 +13,7 @@
   "files": [
     "dist/",
     "src/",
+    "skills/",
     "index.ts",
     "openclaw.plugin.json"
   ],

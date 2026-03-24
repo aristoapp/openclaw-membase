@@ -1,6 +1,7 @@
 {
   "id": "openclaw-membase",
   "kind": "memory",
+  "skills": ["skills"],
   "uiHints": {
     "apiUrl": {
       "label": "Membase API URL",
