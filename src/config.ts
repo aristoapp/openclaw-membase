@@ -178,7 +178,7 @@ export function parseConfig(
       fileTokens.accessToken || normalizeTokenValue(pluginConfig.accessToken),
     refreshToken:
       fileTokens.refreshToken || normalizeTokenValue(pluginConfig.refreshToken),
-    autoRecall: (pluginConfig.autoRecall as boolean) ?? true,
+    autoRecall: (pluginConfig.autoRecall as boolean) ?? false,
     autoCapture: (pluginConfig.autoCapture as boolean) ?? true,
     maxRecallChars: Math.max(
       500,
