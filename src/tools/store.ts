@@ -46,7 +46,7 @@ export function registerStoreTool(
           type: "string",
           description:
             "A short natural-language sentence (≤100 chars) describing what was stored. " +
-            "Write in the user's language. Describe the content factually, not the action.",
+            "Write in the same language the user used. Describe the content factually, not the action.",
         },
       },
       required: ["content", "display_summary"],
