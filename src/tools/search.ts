@@ -15,10 +15,10 @@ export function registerSearchTool(
       "or proactively when past context would improve your response. " +
       "IMPORTANT — date ranges: when the user specifies a date or range (e.g. 'Feb 2–19', 'last week', 'today'), " +
       "you MUST set date_from and date_to as ISO 8601 dates. " +
-      "Do NOT embed the date in the query text — the query should describe WHAT to look for, not WHEN. " +
-      "Example: user asks '2월 2일~19일 일정' → query='schedule meetings appointments', date_from='2026-02-02', date_to='2026-02-19T23:59:59'. " +
-      "For broad topic questions without a date, call this tool multiple times with different angles " +
-      "(e.g. 'meetings with Mashup Ventures', then 'emails from Mashup Ventures'). " +
+      "Do NOT embed temporal references in the query — the query describes WHAT to find, not WHEN. " +
+      "Examples: 'schedule from Feb 2 to 19' → query='', date_from='2026-02-02', date_to='2026-02-19T23:59:59'. " +
+      "'meetings this week' → query='meeting', date_from=<this Monday>, date_to=<this Sunday>. " +
+      "For broad topic questions without a date, call this tool multiple times with different angles. " +
       "Returns episode-centric bundles (episodes with nearby nodes/edges).",
     parameters: {
       type: "object",
@@ -26,11 +26,10 @@ export function registerSearchTool(
         query: {
           type: "string",
           description:
-            "Single focused natural-language semantic query (not keyword matching). " +
-            "Write as a phrase or sentence describing what you are looking for. " +
-            "Examples: 'meetings with investors last week', " +
-            "'emails about the pitch deck', 'user preferences for coding style'. " +
-            "Use empty string '' to fetch recent memories.",
+            "Semantic search query describing WHAT to look for — topic or entity only. " +
+            "Never include temporal references (this week, today, last month, etc.) — those belong in date_from/date_to. " +
+            "Examples: 'team meeting', 'project deadline', 'user preferences'. " +
+            "Use empty string '' for broad date-range retrieval (when date_from/date_to are set).",
         },
         limit: {
           type: "number",
