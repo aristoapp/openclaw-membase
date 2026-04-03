@@ -77,7 +77,7 @@ The agent uses these tools autonomously during conversations:
 
 | Tool | Description |
 | --- | --- |
-| `membase_search` | Search memories by semantic similarity. Supports date filtering (`date_from`, `date_to`, `timezone`). Returns episode bundles with related facts. |
+| `membase_search` | Search memories by semantic similarity. Supports date filtering (`date_from`, `date_to`, `timezone`) and source filtering (`sources` — e.g. `['slack', 'gmail']`). Returns episode bundles with related facts and relevance scores. |
 | `membase_store` | Save important information to long-term memory. Proactively stores preferences, goals, and context. |
 | `membase_forget` | Delete a memory. Shows matches first, then deletes after user confirmation (two-step). |
 | `membase_profile` | Retrieve user profile and related memories for session context. |
@@ -88,6 +88,7 @@ The agent uses these tools autonomously during conversations:
 openclaw membase login              # OAuth login (PKCE) — opens browser
 openclaw membase logout             # Remove stored tokens
 openclaw membase search <query>     # Search memories
+openclaw membase search <query> -s slack,gmail  # Filter by source
 openclaw membase status             # Check API connectivity
 ```
 

@@ -154,11 +154,12 @@ export class MembaseClient {
 
   async search(
     query: string,
-    limit = 10,
+    limit = 20,
     offset?: number,
     dateFrom?: string,
     dateTo?: string,
     timezone?: string,
+    sources?: string[],
   ): Promise<EpisodeBundle[]> {
     const qs = new URLSearchParams({
       query,
@@ -169,6 +170,11 @@ export class MembaseClient {
     if (dateFrom) qs.set("date_from", dateFrom);
     if (dateTo) qs.set("date_to", dateTo);
     if (timezone) qs.set("timezone", timezone);
+    if (sources && sources.length > 0) {
+      for (const source of sources) {
+        qs.append("sources", source);
+      }
+    }
     const data = await this.request<{ episodes: EpisodeBundle[] }>(
       `/memory/search?${qs.toString()}`,
     );

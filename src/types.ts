@@ -79,6 +79,7 @@ export interface EdgeResponse {
 
 export interface EpisodeBundle {
   episode: NodeResponse;
+  relevance_score?: number | null;
   nodes?: NodeResponse[];
   edges: EdgeResponse[];
 }

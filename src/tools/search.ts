@@ -2,6 +2,28 @@ import type { MembaseClient } from "../client";
 import { formatBundles } from "../format";
 import type { OpenClawPluginApi } from "../types";
 
+const MEMORY_SOURCES = [
+  "cursor",
+  "claude-desktop",
+  "claude-code",
+  "vscode",
+  "chatgpt",
+  "gemini-cli",
+  "opencode",
+  "poke",
+  "openclaw",
+  "google-calendar",
+  "gmail",
+  "notion",
+  "slack",
+  "chatgpt-import",
+  "claude-import",
+  "gemini-import",
+  "web-dashboard",
+  "api-direct",
+  "unknown",
+] as const;
+
 export function registerSearchTool(
   api: OpenClawPluginApi,
   client: MembaseClient,
@@ -60,6 +82,17 @@ export function registerSearchTool(
           description:
             "Optional IANA timezone (e.g. 'Asia/Seoul') for interpreting date_from/date_to when they are date-only.",
         },
+        sources: {
+          type: "array",
+          items: { type: "string", enum: MEMORY_SOURCES },
+          description:
+            "Optional. Filter results to specific memory sources. " +
+            "Integrations: 'slack', 'gmail', 'google-calendar', 'notion'. " +
+            "AI clients: 'cursor', 'claude-desktop', 'claude-code', 'vscode', 'chatgpt', 'gemini-cli', 'opencode', 'poke', 'openclaw'. " +
+            "Imports: 'chatgpt-import', 'claude-import', 'gemini-import'. " +
+            "Other: 'web-dashboard', 'api-direct'. " +
+            "Example: ['slack', 'gmail'] returns only Slack and Gmail memories.",
+        },
       },
       required: ["query"],
     },
@@ -72,6 +105,7 @@ export function registerSearchTool(
         date_from?: string;
         date_to?: string;
         timezone?: string;
+        sources?: string[];
       },
     ) {
       try {
@@ -82,6 +116,7 @@ export function registerSearchTool(
           params.date_from,
           params.date_to,
           params.timezone,
+          params.sources,
         );
         return {
           content: [{ type: "text", text: formatBundles(bundles) }],

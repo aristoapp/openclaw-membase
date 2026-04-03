@@ -11,6 +11,7 @@ import {
   writeTokenFile,
 } from "../config";
 import { formatBundles } from "../format";
+import { maybePromptGithubStar } from "../star-prompt";
 import type { OpenClawPluginApi } from "../types";
 
 type OAuthTokenResponse = {
@@ -476,12 +477,17 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
 
           api.logger.info("OAuth login complete. Plugin config saved.");
           api.logger.info("Restart OpenClaw gateway to apply.");
+          await maybePromptGithubStar().catch(() => {});
         });
 
       membase
         .command("search <query>")
         .description("Search memories by semantic similarity")
         .option("-l, --limit <limit>", "Max results", "10")
+        .option(
+          "-s, --sources <sources>",
+          "Comma-separated source filter (e.g. slack,gmail)",
+        )
         .action(async (rawOpts?: unknown) => {
           if (!client.isAuthenticated()) {
             api.logger.warn(
@@ -492,6 +498,7 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
           const opts = (rawOpts ?? {}) as {
             query?: string;
             limit?: string;
+            sources?: string;
           };
           const query =
             typeof rawOpts === "string" ? rawOpts : (opts.query ?? "");
@@ -499,8 +506,22 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
             Number.parseInt(opts.limit ?? "10", 10) || 10,
             100,
           );
+          const sources = opts.sources
+            ? opts.sources
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : undefined;
           try {
-            const bundles = await client.search(query, limit);
+            const bundles = await client.search(
+              query,
+              limit,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              sources,
+            );
             console.log(formatBundles(bundles));
           } catch (error) {
             api.logger.error(

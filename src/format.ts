@@ -50,12 +50,24 @@ export function formatDate(dateStr: string | null | undefined): string {
   }
 }
 
-export function formatBundle(bundle: EpisodeBundle, index: number): string {
+function safeScore(value: number | null | undefined): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return value;
+}
+
+export function formatBundle(
+  bundle: EpisodeBundle,
+  index: number,
+  topScore: number | null = null,
+): string {
   const ep = bundle.episode;
   const name = ep.name || ep.summary || "(untitled)";
   const eventDate = formatDate(ep.valid_at);
   const capturedDate = formatDate(ep.created_at);
   const dateParts: string[] = [];
+  const rawScore = safeScore(bundle.relevance_score);
 
   if (eventDate) {
     dateParts.push(`event: ${eventDate}`);
@@ -68,8 +80,12 @@ export function formatBundle(bundle: EpisodeBundle, index: number): string {
   }
 
   const dateTag = dateParts.length > 0 ? `[${dateParts.join(", ")}] ` : "";
+  const relevanceTag =
+    topScore && rawScore
+      ? `[relevance: ${Math.max(0, Math.min(rawScore / topScore, 1)).toFixed(2)}] `
+      : "";
 
-  const lines: string[] = [`${index + 1}. ${dateTag}${name}`];
+  const lines: string[] = [`${index + 1}. ${relevanceTag}${dateTag}${name}`];
 
   if (ep.summary && ep.summary !== ep.name) {
     lines.push(`   ${ep.summary}`);
@@ -87,8 +103,15 @@ export function formatBundle(bundle: EpisodeBundle, index: number): string {
 
 export function formatBundles(bundles: EpisodeBundle[]): string {
   if (bundles.length === 0) return "No memories found.";
+  const topScore = Math.max(
+    ...bundles.map((bundle) => safeScore(bundle.relevance_score) ?? 0),
+  );
+  const effectiveTopScore = topScore > 0 ? topScore : null;
   const header = `Found ${bundles.length} ${bundles.length === 1 ? "memory" : "memories"}:\n`;
-  return header + bundles.map((b, i) => formatBundle(b, i)).join("\n");
+  return (
+    header +
+    bundles.map((b, i) => formatBundle(b, i, effectiveTopScore)).join("\n")
+  );
 }
 
 export function formatProfile(
@@ -116,8 +139,14 @@ export function formatProfile(
   }
 
   if (bundles.length > 0) {
+    const topScore = Math.max(
+      ...bundles.map((bundle) => safeScore(bundle.relevance_score) ?? 0),
+    );
+    const effectiveTopScore = topScore > 0 ? topScore : null;
     const memoriesHeader = `## Related Memories (${bundles.length})`;
-    const memoriesList = bundles.map((b, i) => formatBundle(b, i)).join("\n");
+    const memoriesList = bundles
+      .map((b, i) => formatBundle(b, i, effectiveTopScore))
+      .join("\n");
     sections.push(`${memoriesHeader}\n${memoriesList}`);
   }
 
