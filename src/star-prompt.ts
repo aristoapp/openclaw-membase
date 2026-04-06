@@ -113,13 +113,27 @@ export async function maybePromptGithubStar(
   const isGhInstalledImpl = deps.isGhInstalledFn ?? isGhInstalled;
   if (!isGhInstalledImpl()) return;
 
-  const markPromptedImpl = deps.markPromptedFn ?? markPrompted;
-  await markPromptedImpl();
-
   const askYesNoImpl = deps.askYesNoFn ?? askYesNo;
   const approved = await askYesNoImpl(
     "[membase] Enjoying Membase? Star it on GitHub? [Y/n] ",
   );
+
+  const warn =
+    deps.warnFn ??
+    ((message: string) => {
+      process.stderr.write(`${message}\n`);
+    });
+  const markPromptedImpl = deps.markPromptedFn ?? markPrompted;
+  try {
+    await markPromptedImpl();
+  } catch (error) {
+    warn(
+      `[membase] Could not persist star prompt state: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+
   if (!approved) return;
 
   const starRepoImpl = deps.starRepoFn ?? starRepo;
@@ -133,10 +147,5 @@ export async function maybePromptGithubStar(
     log("[membase] Thanks for the star!");
     return;
   }
-  const warn =
-    deps.warnFn ??
-    ((message: string) => {
-      process.stderr.write(`${message}\n`);
-    });
   warn(`[membase] Could not star repository automatically: ${star.error}`);
 }
