@@ -17,7 +17,7 @@ describe("maybePromptGithubStar", () => {
       markPromptedFn: async () => {
         steps.push("mark");
       },
-      starRepoFn: () => {
+      starRepoFn: async () => {
         steps.push("star");
         return { ok: true };
       },
@@ -60,7 +60,7 @@ describe("maybePromptGithubStar", () => {
       markPromptedFn: async () => {
         throw new Error("disk error");
       },
-      starRepoFn: () => ({ ok: true }),
+      starRepoFn: async () => ({ ok: true }),
       warnFn: (message) => warnings.push(message),
       logFn: (message) => logs.push(message),
     });

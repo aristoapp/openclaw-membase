@@ -6,6 +6,7 @@
  */
 
 import * as childProcess from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -13,6 +14,8 @@ import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 const REPO = "aristoapp/openclaw-membase";
+const GH_CHECK_TIMEOUT_MS = 3000;
+const STAR_TIMEOUT_MS = 30000;
 
 interface StarPromptState {
   prompted_at: string;
@@ -47,7 +50,18 @@ export function isGhInstalled(): boolean {
   const result = childProcess.spawnSync("gh", ["--version"], {
     encoding: "utf-8",
     stdio: ["ignore", "ignore", "ignore"],
-    timeout: 3000,
+    timeout: GH_CHECK_TIMEOUT_MS,
+    env: { ...process.env, GH_PROMPT_DISABLED: "1" },
+  });
+  return !result.error && result.status === 0;
+}
+
+export function isGhAuthenticated(): boolean {
+  const result = childProcess.spawnSync("gh", ["auth", "status"], {
+    encoding: "utf-8",
+    stdio: ["ignore", "ignore", "ignore"],
+    timeout: GH_CHECK_TIMEOUT_MS,
+    env: { ...process.env, GH_PROMPT_DISABLED: "1" },
   });
   return !result.error && result.status === 0;
 }
@@ -59,35 +73,47 @@ interface MaybePromptGithubStarDeps {
   stdoutIsTTY?: boolean;
   hasBeenPromptedFn?: () => Promise<boolean>;
   isGhInstalledFn?: () => boolean;
+  isGhAuthenticatedFn?: () => boolean;
   markPromptedFn?: () => Promise<void>;
   askYesNoFn?: (question: string) => Promise<boolean>;
-  starRepoFn?: () => StarRepoResult;
+  starRepoFn?: () => Promise<StarRepoResult>;
   logFn?: (message: string) => void;
   warnFn?: (message: string) => void;
 }
 
-export function starRepo(
-  spawnSyncFn: typeof childProcess.spawnSync = childProcess.spawnSync,
-): StarRepoResult {
-  const result = spawnSyncFn(
-    "gh",
-    ["api", "-X", "PUT", `/user/starred/${REPO}`],
-    {
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 10000,
-    },
-  );
-  if (result.error) return { ok: false, error: result.error.message };
-  if (result.status !== 0) {
-    const stderr = (result.stderr || "").trim();
-    const stdout = (result.stdout || "").trim();
-    return {
-      ok: false,
-      error: stderr || stdout || `gh exited ${result.status}`,
-    };
-  }
-  return { ok: true };
+export function starRepo(): Promise<StarRepoResult> {
+  return new Promise((resolve) => {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), STAR_TIMEOUT_MS);
+
+    execFile(
+      "gh",
+      ["api", "-X", "PUT", `/user/starred/${REPO}`],
+      {
+        encoding: "utf-8",
+        env: { ...process.env, GH_PROMPT_DISABLED: "1" },
+        signal: ac.signal,
+      },
+      (error, _stdout, stderr) => {
+        clearTimeout(timer);
+        if (error) {
+          if (
+            error.name === "AbortError" ||
+            (error as NodeJS.ErrnoException).code === "ABORT_ERR"
+          ) {
+            resolve({
+              ok: false,
+              error: `gh timed out after ${Math.floor(STAR_TIMEOUT_MS / 1000)}s`,
+            });
+            return;
+          }
+          resolve({ ok: false, error: stderr?.trim() || error.message });
+          return;
+        }
+        resolve({ ok: true });
+      },
+    );
+  });
 }
 
 async function askYesNo(question: string): Promise<boolean> {
@@ -113,6 +139,9 @@ export async function maybePromptGithubStar(
   const isGhInstalledImpl = deps.isGhInstalledFn ?? isGhInstalled;
   if (!isGhInstalledImpl()) return;
 
+  const isGhAuthenticatedImpl = deps.isGhAuthenticatedFn ?? isGhAuthenticated;
+  if (!isGhAuthenticatedImpl()) return;
+
   const askYesNoImpl = deps.askYesNoFn ?? askYesNo;
   const approved = await askYesNoImpl(
     "[membase] Enjoying Membase? Star it on GitHub? [Y/n] ",
@@ -137,7 +166,7 @@ export async function maybePromptGithubStar(
   if (!approved) return;
 
   const starRepoImpl = deps.starRepoFn ?? starRepo;
-  const star = starRepoImpl();
+  const star = await starRepoImpl();
   if (star.ok) {
     const log =
       deps.logFn ??

@@ -14,7 +14,6 @@ const MEMORY_SOURCES = [
   "openclaw",
   "google-calendar",
   "gmail",
-  "notion",
   "slack",
   "chatgpt-import",
   "claude-import",
@@ -87,7 +86,7 @@ export function registerSearchTool(
           items: { type: "string", enum: MEMORY_SOURCES },
           description:
             "Optional. Filter results to specific memory sources. " +
-            "Integrations: 'slack', 'gmail', 'google-calendar', 'notion'. " +
+            "Integrations: 'slack', 'gmail', 'google-calendar'. " +
             "AI clients: 'cursor', 'claude-desktop', 'claude-code', 'vscode', 'chatgpt', 'gemini-cli', 'opencode', 'poke', 'openclaw'. " +
             "Imports: 'chatgpt-import', 'claude-import', 'gemini-import'. " +
             "Other: 'web-dashboard', 'api-direct'. " +
