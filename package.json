@@ -1,6 +1,6 @@
 {
   "name": "@membase/openclaw-membase",
-  "version": "0.3.24",
+  "version": "0.4.0",
   "main": "./index.ts",
   "description": "Membase plugin for OpenClaw — persistent long-term memory for AI agents",
   "type": "module",
