@@ -40,7 +40,8 @@ export function registerStoreTool(
             "or they are likely to matter later. " +
             "Do not store secrets (tokens, passwords). Avoid duplicates. " +
             "If previously stored information has changed, store the updated version as a new memory — " +
-            "do not try to modify the old one.",
+            "do not try to modify the old one. " +
+            "Do NOT put project/tag/category information inside the content — use the 'project' field instead.",
         },
         display_summary: {
           type: "string",
@@ -48,12 +49,21 @@ export function registerStoreTool(
             "A short natural-language sentence (≤100 chars) describing what was stored. " +
             "Write in the same language the user used. Describe the content factually, not the action.",
         },
+        project: {
+          type: "string",
+          maxLength: 60,
+          description:
+            "Project or category to file this memory under. " +
+            "Set ONLY when the user explicitly mentions a project name, tag, label, or category " +
+            "(e.g., 'save this under project X', 'tag this as Y'). " +
+            "Do NOT guess or infer a project — leave empty when the user does not specify one.",
+        },
       },
       required: ["content", "display_summary"],
     },
     async execute(
       _toolCallId: string,
-      params: { content: string; display_summary: string },
+      params: { content: string; display_summary: string; project?: string },
     ) {
       try {
         if (params.content.length > MAX_CONTENT_LENGTH) {
@@ -69,6 +79,7 @@ export function registerStoreTool(
 
         const result = await client.ingest(params.content, {
           displaySummary: params.display_summary,
+          project: params.project,
         });
         return {
           content: [

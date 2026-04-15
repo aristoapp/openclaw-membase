@@ -160,6 +160,7 @@ export class MembaseClient {
     dateTo?: string,
     timezone?: string,
     sources?: string[],
+    project?: string,
   ): Promise<EpisodeBundle[]> {
     const qs = new URLSearchParams({
       query,
@@ -175,6 +176,7 @@ export class MembaseClient {
         qs.append("sources", source);
       }
     }
+    if (project?.trim()) qs.set("project", project.trim());
     const data = await this.request<{ episodes: EpisodeBundle[] }>(
       `/memory/search?${qs.toString()}`,
     );
@@ -183,7 +185,7 @@ export class MembaseClient {
 
   async ingest(
     content: string,
-    opts?: { displaySummary?: string },
+    opts?: { displaySummary?: string; project?: string },
   ): Promise<{ status: string }> {
     const body: Record<string, unknown> = {
       content,
@@ -192,6 +194,9 @@ export class MembaseClient {
     };
     if (opts?.displaySummary) {
       body.display_summary = opts.displaySummary;
+    }
+    if (opts?.project?.trim()) {
+      body.project = opts.project.trim();
     }
     return this.request<{ status: string }>("/memory/ingest", {
       method: "POST",

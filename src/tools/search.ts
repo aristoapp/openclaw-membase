@@ -93,6 +93,13 @@ export function registerSearchTool(
             "Other: 'web-dashboard', 'api-direct'. " +
             "Example: ['slack', 'gmail'] returns only Slack and Gmail memories.",
         },
+        project: {
+          type: "string",
+          maxLength: 60,
+          description:
+            "Optional. Restrict search to one project slug (exact match). " +
+            "Use only when the user explicitly asks for a project/category scope.",
+        },
       },
       required: ["query"],
     },
@@ -106,6 +113,7 @@ export function registerSearchTool(
         date_to?: string;
         timezone?: string;
         sources?: string[];
+        project?: string;
       },
     ) {
       try {
@@ -117,6 +125,7 @@ export function registerSearchTool(
           params.date_to,
           params.timezone,
           params.sources,
+          params.project,
         );
         return {
           content: [{ type: "text", text: formatBundles(bundles) }],
