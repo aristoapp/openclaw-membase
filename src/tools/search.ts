@@ -40,7 +40,8 @@ export function registerSearchTool(
       "Examples: 'schedule from Feb 2 to 19' → query='', date_from='2026-02-02', date_to='2026-02-19T23:59:59'. " +
       "'meetings this week' → query='meeting', date_from=<this Monday>, date_to=<this Sunday>. " +
       "For broad topic questions without a date, call this tool multiple times with different angles. " +
-      "Returns episode-centric bundles (episodes with nearby nodes/edges).",
+      "Returns episode-centric bundles (episodes with nearby nodes/edges). " +
+      "For factual knowledge or reference docs, also call membase_search_wiki alongside this tool.",
     parameters: {
       type: "object",
       properties: {
