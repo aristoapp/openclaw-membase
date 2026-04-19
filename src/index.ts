@@ -218,6 +218,8 @@ export default {
         );
     }
 
+    startBackgroundUpdateCheck();
+
     const client = new MembaseClient(
       cfg.apiUrl.replace(/\/$/, ""),
       {
@@ -304,7 +306,6 @@ export default {
           `membase: connected (recall: ${cfg.autoRecall}, wikiRecall: ${cfg.autoWikiRecall}, capture: ${cfg.autoCapture})`,
         );
         client.registerConnection().catch(() => {});
-        startBackgroundUpdateCheck();
       },
       stop: async () => {
         if (cfg.autoCapture) {
