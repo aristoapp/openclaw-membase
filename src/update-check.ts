@@ -236,11 +236,23 @@ export function startBackgroundUpdateCheck(): void {
  * Shared helper for membase_* tools: wraps a plain text response into the
  * MCP-style `{ content: [{ type, text }] }` shape and transparently appends
  * the update footer at most once per UTC day.
+ *
+ * If the state file doesn't exist yet (e.g. service.start() was never called
+ * or the background check hasn't completed), triggers a fresh check inline
+ * before attempting to show the footer.
  */
 export async function toolResponse(
   text: string,
   deps: FooterDeps = {},
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  try {
+    const statePath = updateCheckStatePath();
+    if (!existsSync(statePath)) {
+      await refreshLatestVersion(deps).catch(() => {});
+    }
+  } catch {
+    // ignore
+  }
   const withFooter = await withUpdateFooter(text, deps);
   return { content: [{ type: "text", text: withFooter }] };
 }
