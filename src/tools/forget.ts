@@ -1,6 +1,7 @@
 import type { MembaseClient } from "../client";
 import { formatBundle } from "../format";
 import type { OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 
 export function registerForgetTool(
   api: OpenClawPluginApi,
@@ -45,20 +46,12 @@ export function registerForgetTool(
       try {
         if (params.confirm && params.uuid) {
           await client.deleteMemory(params.uuid);
-          return {
-            content: [
-              { type: "text", text: `Memory deleted (${params.uuid}).` },
-            ],
-          };
+          return await toolResponse(`Memory deleted (${params.uuid}).`);
         }
 
         const bundles = await client.search(params.query, 5);
         if (bundles.length === 0) {
-          return {
-            content: [
-              { type: "text", text: "No matching memory found to forget." },
-            ],
-          };
+          return await toolResponse("No matching memory found to forget.");
         }
 
         const formatted = bundles.map((b, i) => {
@@ -66,22 +59,14 @@ export function registerForgetTool(
           return `${formatBundle(b, i)}\n   UUID: ${uuid}`;
         });
 
-        return {
-          content: [
-            {
-              type: "text",
-              text:
-                "Found these matching memories. Ask the user which one to delete, " +
-                "then call membase_forget again with confirm=true and the uuid.\n\n" +
-                formatted.join("\n\n"),
-            },
-          ],
-        };
+        return await toolResponse(
+          "Found these matching memories. Ask the user which one to delete, " +
+            "then call membase_forget again with confirm=true and the uuid.\n\n" +
+            formatted.join("\n\n"),
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Forget failed: ${message}` }],
-        };
+        return await toolResponse(`Forget failed: ${message}`);
       }
     },
   });

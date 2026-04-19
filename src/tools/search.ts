@@ -1,6 +1,7 @@
 import type { MembaseClient } from "../client";
 import { formatBundles } from "../format";
 import type { OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 
 const MEMORY_SOURCES = [
   "cursor",
@@ -127,14 +128,10 @@ export function registerSearchTool(
           params.sources,
           params.project,
         );
-        return {
-          content: [{ type: "text", text: formatBundles(bundles) }],
-        };
+        return await toolResponse(formatBundles(bundles));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Search failed: ${message}` }],
-        };
+        return await toolResponse(`Search failed: ${message}`);
       }
     },
   });

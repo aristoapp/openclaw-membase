@@ -1,5 +1,6 @@
 import type { MembaseClient } from "../client";
 import type { OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 
 export function registerAddWikiTool(
   api: OpenClawPluginApi,
@@ -50,19 +51,12 @@ export function registerAddWikiTool(
           params.collection_id,
           params.summarize,
         );
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Wiki document created: "${doc.title}" (ID: ${doc.id})`,
-            },
-          ],
-        };
+        return await toolResponse(
+          `Wiki document created: "${doc.title}" (ID: ${doc.id})`,
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Add wiki failed: ${message}` }],
-        };
+        return await toolResponse(`Add wiki failed: ${message}`);
       }
     },
   });

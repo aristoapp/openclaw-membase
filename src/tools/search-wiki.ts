@@ -1,6 +1,7 @@
 import type { MembaseClient } from "../client";
 import { formatWikiDocuments } from "../format";
 import type { OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 
 export function registerSearchWikiTool(
   api: OpenClawPluginApi,
@@ -42,16 +43,10 @@ export function registerSearchWikiTool(
           params.limit ?? 10,
           params.collection_id,
         );
-        return {
-          content: [
-            { type: "text", text: formatWikiDocuments(result.documents) },
-          ],
-        };
+        return await toolResponse(formatWikiDocuments(result.documents));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Wiki search failed: ${message}` }],
-        };
+        return await toolResponse(`Wiki search failed: ${message}`);
       }
     },
   });

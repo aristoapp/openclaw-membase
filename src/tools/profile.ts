@@ -1,6 +1,7 @@
 import type { MembaseClient } from "../client";
 import { formatProfile } from "../format";
 import type { EpisodeBundle, OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 import { withTimeout } from "../utils";
 
 export function registerProfileTool(
@@ -68,16 +69,10 @@ export function registerProfileTool(
           }
         }
 
-        return {
-          content: [{ type: "text", text: formatProfile(profile, allBundles) }],
-        };
+        return await toolResponse(formatProfile(profile, allBundles));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [
-            { type: "text", text: `Profile retrieval failed: ${message}` },
-          ],
-        };
+        return await toolResponse(`Profile retrieval failed: ${message}`);
       }
     },
   });

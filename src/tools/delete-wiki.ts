@@ -1,6 +1,7 @@
 import type { MembaseClient } from "../client";
 import { formatWikiDocument } from "../format";
 import type { OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 
 export function registerDeleteWikiTool(
   api: OpenClawPluginApi,
@@ -49,14 +50,9 @@ export function registerDeleteWikiTool(
       try {
         if (params.confirm && params.doc_id) {
           await client.deleteWikiDocument(params.doc_id);
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Wiki document deleted (ID: ${params.doc_id})`,
-              },
-            ],
-          };
+          return await toolResponse(
+            `Wiki document deleted (ID: ${params.doc_id})`,
+          );
         }
 
         const result = await client.searchWiki(
@@ -65,31 +61,19 @@ export function registerDeleteWikiTool(
           params.collection_id,
         );
         if (result.documents.length === 0) {
-          return {
-            content: [
-              { type: "text", text: "No matching wiki document found." },
-            ],
-          };
+          return await toolResponse("No matching wiki document found.");
         }
 
         const lines = result.documents.map((doc, index) =>
           formatWikiDocument(doc, index),
         );
-        return {
-          content: [
-            {
-              type: "text",
-              text:
-                "Found these matching wiki documents. Ask the user which one to delete, then call again with confirm=true and doc_id.\n\n" +
-                lines.join("\n\n"),
-            },
-          ],
-        };
+        return await toolResponse(
+          "Found these matching wiki documents. Ask the user which one to delete, then call again with confirm=true and doc_id.\n\n" +
+            lines.join("\n\n"),
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Delete wiki failed: ${message}` }],
-        };
+        return await toolResponse(`Delete wiki failed: ${message}`);
       }
     },
   });

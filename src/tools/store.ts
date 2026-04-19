@@ -1,5 +1,6 @@
 import type { MembaseClient } from "../client";
 import type { OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 
 const MAX_CONTENT_LENGTH = 50_000;
 
@@ -67,30 +68,19 @@ export function registerStoreTool(
     ) {
       try {
         if (params.content.length > MAX_CONTENT_LENGTH) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Content too long (${params.content.length} chars). Maximum is ${MAX_CONTENT_LENGTH}.`,
-              },
-            ],
-          };
+          return await toolResponse(
+            `Content too long (${params.content.length} chars). Maximum is ${MAX_CONTENT_LENGTH}.`,
+          );
         }
 
         const result = await client.ingest(params.content, {
           displaySummary: params.display_summary,
           project: params.project,
         });
-        return {
-          content: [
-            { type: "text", text: `Stored in Membase (${result.status})` },
-          ],
-        };
+        return await toolResponse(`Stored in Membase (${result.status})`);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Store failed: ${message}` }],
-        };
+        return await toolResponse(`Store failed: ${message}`);
       }
     },
   });

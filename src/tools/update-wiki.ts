@@ -1,5 +1,6 @@
 import type { MembaseClient } from "../client";
 import type { OpenClawPluginApi } from "../types";
+import { toolResponse } from "../update-check";
 
 export function registerUpdateWikiTool(
   api: OpenClawPluginApi,
@@ -47,14 +48,9 @@ export function registerUpdateWikiTool(
           params.content === undefined &&
           params.collection_id === undefined
         ) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: "At least one update field is required (title/content/collection_id).",
-              },
-            ],
-          };
+          return await toolResponse(
+            "At least one update field is required (title/content/collection_id).",
+          );
         }
 
         const doc = await client.updateWikiDocument(params.doc_id, {
@@ -62,19 +58,12 @@ export function registerUpdateWikiTool(
           content: params.content,
           collection_id: params.collection_id,
         });
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Wiki document updated: "${doc.title}" (ID: ${doc.id})`,
-            },
-          ],
-        };
+        return await toolResponse(
+          `Wiki document updated: "${doc.title}" (ID: ${doc.id})`,
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: "text", text: `Update wiki failed: ${message}` }],
-        };
+        return await toolResponse(`Update wiki failed: ${message}`);
       }
     },
   });

@@ -27,6 +27,7 @@ import { registerSearchWikiTool } from "./tools/search-wiki";
 import { registerStoreTool } from "./tools/store";
 import { registerUpdateWikiTool } from "./tools/update-wiki";
 import type { OpenClawPluginApi } from "./types";
+import { startBackgroundUpdateCheck } from "./update-check";
 
 type TokenPair = {
   accessToken: string;
@@ -303,6 +304,7 @@ export default {
           `membase: connected (recall: ${cfg.autoRecall}, wikiRecall: ${cfg.autoWikiRecall}, capture: ${cfg.autoCapture})`,
         );
         client.registerConnection().catch(() => {});
+        startBackgroundUpdateCheck();
       },
       stop: async () => {
         if (cfg.autoCapture) {
