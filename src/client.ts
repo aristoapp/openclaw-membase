@@ -1,4 +1,9 @@
-import type { EpisodeBundle, Logger } from "./types";
+import type {
+  EpisodeBundle,
+  Logger,
+  WikiDocumentResponse,
+  WikiSearchResponse,
+} from "./types";
 import { MembaseApiError } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -121,6 +126,32 @@ export class MembaseClient {
     path: string,
     options: RequestInit = {},
   ): Promise<T> {
+    const response = await this.authorizedFetch(path, options);
+    const text = await response.text();
+    this.log(`${path} → ${text.length} chars`);
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new MembaseApiError(
+        `Membase API returned non-JSON response: ${text.slice(0, 200)}`,
+        response.status,
+        text,
+      );
+    }
+  }
+
+  private async requestNoContent(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<void> {
+    const response = await this.authorizedFetch(path, options);
+    await response.body?.cancel();
+  }
+
+  private async authorizedFetch(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<Response> {
     this.log(`${options.method ?? "GET"} ${path}`);
     let response = await this.doFetch(path, options);
 
@@ -138,18 +169,7 @@ export class MembaseClient {
         text,
       );
     }
-
-    const text = await response.text();
-    this.log(`${path} → ${text.length} chars`);
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      throw new MembaseApiError(
-        `Membase API returned non-JSON response: ${text.slice(0, 200)}`,
-        response.status,
-        text,
-      );
-    }
+    return response;
   }
 
   async search(
@@ -214,7 +234,9 @@ export class MembaseClient {
   }
 
   async deleteMemory(uuid: string): Promise<void> {
-    await this.request(`/memory/episodes/${uuid}`, { method: "DELETE" });
+    await this.requestNoContent(`/memory/episodes/${uuid}`, {
+      method: "DELETE",
+    });
   }
 
   async getUserProfileMemory(): Promise<EpisodeBundle | null> {
@@ -246,5 +268,50 @@ export class MembaseClient {
     } catch {
       // fire-and-forget: don't fail plugin startup for analytics
     }
+  }
+
+  async searchWiki(
+    query: string,
+    limit?: number,
+    collectionId?: string,
+  ): Promise<WikiSearchResponse> {
+    const qs = new URLSearchParams({ query });
+    if (limit !== undefined) qs.set("limit", String(limit));
+    if (collectionId) qs.set("collection_id", collectionId);
+    return this.request<WikiSearchResponse>(`/wiki/search?${qs.toString()}`);
+  }
+
+  async createWikiDocument(
+    title: string,
+    content: string,
+    collectionId?: string,
+    summarize?: boolean,
+  ): Promise<WikiDocumentResponse> {
+    return this.request<WikiDocumentResponse>("/wiki/documents", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        content,
+        collection_id: collectionId ?? null,
+        source: "openclaw",
+        summarize: summarize ?? false,
+      }),
+    });
+  }
+
+  async updateWikiDocument(
+    docId: string,
+    updates: { title?: string; content?: string; collection_id?: string },
+  ): Promise<WikiDocumentResponse> {
+    return this.request<WikiDocumentResponse>(`/wiki/documents/${docId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteWikiDocument(docId: string): Promise<void> {
+    await this.requestNoContent(`/wiki/documents/${docId}`, {
+      method: "DELETE",
+    });
   }
 }

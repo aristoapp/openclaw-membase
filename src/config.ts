@@ -35,6 +35,7 @@ const KNOWN_KEYS = new Set([
   "accessToken",
   "refreshToken",
   "autoRecall",
+  "autoWikiRecall",
   "autoCapture",
   "maxRecallChars",
   "debug",
@@ -179,6 +180,7 @@ export function parseConfig(
     refreshToken:
       fileTokens.refreshToken || normalizeTokenValue(pluginConfig.refreshToken),
     autoRecall: (pluginConfig.autoRecall as boolean) ?? false,
+    autoWikiRecall: (pluginConfig.autoWikiRecall as boolean) ?? false,
     autoCapture: (pluginConfig.autoCapture as boolean) ?? true,
     maxRecallChars: Math.max(
       500,

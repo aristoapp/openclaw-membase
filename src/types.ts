@@ -49,6 +49,7 @@ export interface MembasePluginConfig {
   accessToken: string;
   refreshToken: string;
   autoRecall: boolean;
+  autoWikiRecall: boolean;
   autoCapture: boolean;
   maxRecallChars: number;
   debug: boolean;
@@ -82,4 +83,35 @@ export interface EpisodeBundle {
   relevance_score?: number | null;
   nodes?: NodeResponse[];
   edges: EdgeResponse[];
+}
+
+export interface WikiSearchDocument {
+  id: string;
+  title: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  source: string;
+  collection_id: string | null;
+  collection_name: string | null;
+  similarity: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface WikiSearchResponse {
+  documents: WikiSearchDocument[];
+  total_count: number;
+}
+
+export interface WikiDocumentResponse {
+  id: string;
+  user_id: string;
+  collection_id: string | null;
+  title: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  status: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
 }

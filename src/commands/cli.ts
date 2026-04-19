@@ -532,6 +532,192 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
         });
 
       membase
+        .command("wiki-search <query>")
+        .description("Search wiki documents")
+        .option("-l, --limit <limit>", "Max results", "10")
+        .option(
+          "-c, --collection-id <collectionId>",
+          "Optional wiki collection filter",
+        )
+        .action(async (rawOpts?: unknown) => {
+          if (!client.isAuthenticated()) {
+            api.logger.warn(
+              "Not logged in. Run 'openclaw membase login' first.",
+            );
+            return;
+          }
+          const opts = (rawOpts ?? {}) as {
+            query?: string;
+            limit?: string;
+            collectionId?: string;
+          };
+          const query =
+            typeof rawOpts === "string" ? rawOpts : (opts.query ?? "");
+          const limit = Math.min(
+            Number.parseInt(opts.limit ?? "10", 10) || 10,
+            20,
+          );
+          try {
+            const result = await client.searchWiki(
+              query,
+              limit,
+              opts.collectionId,
+            );
+            if (result.documents.length === 0) {
+              console.log("No wiki documents found.");
+              return;
+            }
+            for (const [index, doc] of result.documents.entries()) {
+              console.log(`${index + 1}. ${doc.title}`);
+              console.log(`   ID: ${doc.id}`);
+              if (doc.collection_name) {
+                console.log(`   Collection: ${doc.collection_name}`);
+              }
+              if (doc.content) {
+                console.log(`   ${doc.content}`);
+              }
+              console.log("");
+            }
+          } catch (error) {
+            api.logger.error(
+              "Wiki search failed:",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        });
+
+      membase
+        .command("wiki-add <title>")
+        .description("Add a wiki document")
+        .option("--content <content>", "Markdown content")
+        .option(
+          "-c, --collection-id <collectionId>",
+          "Optional wiki collection ID",
+        )
+        .option("--summarize", "Generate a structured summary")
+        .action(async (rawOpts?: unknown) => {
+          if (!client.isAuthenticated()) {
+            api.logger.warn(
+              "Not logged in. Run 'openclaw membase login' first.",
+            );
+            return;
+          }
+          const opts = (rawOpts ?? {}) as {
+            title?: string;
+            content?: string;
+            collectionId?: string;
+            summarize?: boolean;
+          };
+          const title =
+            typeof rawOpts === "string" ? rawOpts : (opts.title ?? "");
+          if (!title.trim()) {
+            api.logger.error("Missing wiki title.");
+            return;
+          }
+          if (!opts.content?.trim()) {
+            api.logger.error(
+              'Missing --content. Example: openclaw membase wiki-add "Title" --content "# Doc"',
+            );
+            return;
+          }
+          try {
+            const doc = await client.createWikiDocument(
+              title,
+              opts.content,
+              opts.collectionId,
+              Boolean(opts.summarize),
+            );
+            api.logger.info(`Wiki document created: ${doc.title} (${doc.id})`);
+          } catch (error) {
+            api.logger.error(
+              "Wiki add failed:",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        });
+
+      membase
+        .command("wiki-update <docId>")
+        .description("Update a wiki document")
+        .option("--title <title>", "New title")
+        .option("--content <content>", "New markdown content")
+        .option(
+          "-c, --collection-id <collectionId>",
+          "Move to another collection",
+        )
+        .action(async (rawOpts?: unknown) => {
+          if (!client.isAuthenticated()) {
+            api.logger.warn(
+              "Not logged in. Run 'openclaw membase login' first.",
+            );
+            return;
+          }
+          const opts = (rawOpts ?? {}) as {
+            docId?: string;
+            title?: string;
+            content?: string;
+            collectionId?: string;
+          };
+          const docId =
+            typeof rawOpts === "string" ? rawOpts : (opts.docId ?? "");
+          if (!docId.trim()) {
+            api.logger.error("Missing docId.");
+            return;
+          }
+          if (
+            opts.title === undefined &&
+            opts.content === undefined &&
+            opts.collectionId === undefined
+          ) {
+            api.logger.error(
+              "No updates supplied. Use --title, --content, and/or --collection-id.",
+            );
+            return;
+          }
+          try {
+            const doc = await client.updateWikiDocument(docId, {
+              title: opts.title,
+              content: opts.content,
+              collection_id: opts.collectionId,
+            });
+            api.logger.info(`Wiki document updated: ${doc.title} (${doc.id})`);
+          } catch (error) {
+            api.logger.error(
+              "Wiki update failed:",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        });
+
+      membase
+        .command("wiki-delete <docId>")
+        .description("Delete a wiki document by ID")
+        .action(async (rawOpts?: unknown) => {
+          if (!client.isAuthenticated()) {
+            api.logger.warn(
+              "Not logged in. Run 'openclaw membase login' first.",
+            );
+            return;
+          }
+          const opts = (rawOpts ?? {}) as { docId?: string };
+          const docId =
+            typeof rawOpts === "string" ? rawOpts : (opts.docId ?? "");
+          if (!docId.trim()) {
+            api.logger.error("Missing docId.");
+            return;
+          }
+          try {
+            await client.deleteWikiDocument(docId);
+            api.logger.info(`Wiki document deleted: ${docId}`);
+          } catch (error) {
+            api.logger.error(
+              "Wiki delete failed:",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        });
+
+      membase
         .command("status")
         .description("Check Membase API connectivity")
         .action(async () => {

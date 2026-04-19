@@ -3,7 +3,7 @@
 [![Membase banner](https://github.com/user-attachments/assets/19393af8-7af0-4e8f-9967-b5c9d8119d83)](https://membase.so/?utm_source=github&utm_medium=openclaw-membase)
 
 <p align="center">
-  Persistent long-term memory for OpenClaw — hybrid vector search + knowledge graph.
+  Persistent long-term memory for OpenClaw using hybrid vector search and a knowledge graph.
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ Restart OpenClaw after installing.
 openclaw membase login
 ```
 
-Opens a browser for OAuth authentication. Tokens are saved automatically — no API keys to copy-paste. That's it, memory works automatically from here.
+Opens a browser for OAuth authentication. Tokens are saved automatically, so there are no API keys to copy and paste.
 
 ## How It Works
 
@@ -52,8 +52,8 @@ User message
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
-│  AI Response            │  Agent can also call membase_search,
-│                         │  membase_store, etc. autonomously
+│  AI Response            │  Agent can call memory and wiki tools
+│                         │  (membase_search, membase_search_wiki, etc.)
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
@@ -67,9 +67,9 @@ User message
 └─────────────────────────┘
 ```
 
-- **Auto-Recall** — Before every AI turn, searches your memories by semantic similarity and injects relevant context. Skips casual chat and short messages. Respects a `maxRecallChars` budget (default 4000) to avoid oversized context.
-- **Auto-Capture** — After conversations, buffers messages and sends them to Membase for extraction. Entities and relationships are automatically extracted into a knowledge graph. Flushes after 5 minutes of silence or 20 messages.
-- **Knowledge Graph** — Unlike simple vector-only memory, Membase uses hybrid vector search + knowledge graph to store entities, relationships, and facts. Search results include related nodes and edges for richer context.
+- **Auto-Recall**: Before every AI turn, searches memory and wiki context (when enabled) and injects relevant snippets. Skips casual chat and short messages. Respects a `maxRecallChars` budget (default 4000) to avoid oversized context.
+- **Auto-Capture**: After conversations, buffers messages and sends them to Membase for extraction. Entities and relationships are automatically extracted into a knowledge graph. Flushes after 5 minutes of silence or 20 messages.
+- **Knowledge Graph**: Unlike simple vector-only memory, Membase uses hybrid vector search and a knowledge graph to store entities, relationships, and facts.
 
 ## AI Tools
 
@@ -81,6 +81,10 @@ The agent uses these tools autonomously during conversations:
 | `membase_store` | Save important information to long-term memory. Proactively stores preferences, goals, and context. |
 | `membase_forget` | Delete a memory. Shows matches first, then deletes after user confirmation (two-step). |
 | `membase_profile` | Retrieve user profile and related memories for session context. |
+| `membase_search_wiki` | Search wiki documents for factual references and stable knowledge. |
+| `membase_add_wiki` | Create a wiki document from markdown content. |
+| `membase_update_wiki` | Update title/content/collection of an existing wiki document. |
+| `membase_delete_wiki` | Delete a wiki document with confirmation flow. |
 
 ## CLI Commands
 
@@ -89,6 +93,10 @@ openclaw membase login              # OAuth login (PKCE) — opens browser
 openclaw membase logout             # Remove stored tokens
 openclaw membase search <query>     # Search memories
 openclaw membase search <query> -s slack,gmail  # Filter by source
+openclaw membase wiki-search <query>            # Search wiki documents
+openclaw membase wiki-add "<title>" --content "<markdown>"   # Add wiki doc
+openclaw membase wiki-update <docId> --title "<new title>"   # Update wiki doc
+openclaw membase wiki-delete <docId>            # Delete wiki doc
 openclaw membase status             # Check API connectivity
 ```
 
@@ -100,7 +108,8 @@ All configuration is managed through OpenClaw's plugin settings or `~/.openclaw/
 | --- | --- | --- | --- |
 | `apiUrl` | string | `https://api.membase.so` | Membase API URL. Override for self-hosted. |
 | `tokenFile` | string | `~/.openclaw/credentials/openclaw-membase.json` | OAuth token cache file path. Stored outside the plugin directory so it survives updates. |
-| `autoRecall` | boolean | `true` | Inject relevant memories before every AI turn. |
+| `autoRecall` | boolean | `false` | Inject relevant memories before every AI turn. |
+| `autoWikiRecall` | boolean | `false` | Inject relevant wiki documents before every AI turn. |
 | `autoCapture` | boolean | `true` | Automatically store conversations to memory. |
 | `maxRecallChars` | number | `4000` | Max characters of memory context per turn (500–16000). |
 | `debug` | boolean | `false` | Enable verbose debug logs. |
@@ -126,6 +135,7 @@ If you prefer to configure it manually, use `tools.alsoAllow` (not `tools.allow`
         "enabled": true,
         "config": {
           "autoRecall": true,
+          "autoWikiRecall": false,
           "autoCapture": true,
           "maxRecallChars": 4000
         }

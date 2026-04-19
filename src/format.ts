@@ -1,4 +1,4 @@
-import type { EpisodeBundle } from "./types";
+import type { EpisodeBundle, WikiSearchDocument } from "./types";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -153,4 +153,33 @@ export function formatProfile(
   return sections.length > 0
     ? sections.join("\n\n")
     : "No profile or memories found.";
+}
+
+export function formatWikiDocument(
+  doc: WikiSearchDocument,
+  index: number,
+): string {
+  const collection = doc.collection_name
+    ? ` [collection: ${doc.collection_name}]`
+    : "";
+  const similarity =
+    typeof doc.similarity === "number"
+      ? ` [similarity: ${doc.similarity.toFixed(3)}]`
+      : "";
+  const lines: string[] = [
+    `${index + 1}. ${doc.title}${collection}${similarity}`,
+  ];
+  lines.push(`   ID: ${doc.id}`);
+  if (doc.content) {
+    lines.push(`   ${doc.content}`);
+  }
+  return lines.join("\n");
+}
+
+export function formatWikiDocuments(documents: WikiSearchDocument[]): string {
+  if (documents.length === 0) return "No wiki documents found.";
+  const header = `Found ${documents.length} wiki ${documents.length === 1 ? "document" : "documents"}:\n`;
+  return (
+    header + documents.map((doc, i) => formatWikiDocument(doc, i)).join("\n\n")
+  );
 }

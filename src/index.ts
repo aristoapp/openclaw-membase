@@ -18,10 +18,14 @@ import {
 } from "./config";
 import { flushAllBuffers, registerCaptureHook } from "./hooks/capture";
 import { registerRecallHook } from "./hooks/recall";
+import { registerAddWikiTool } from "./tools/add-wiki";
+import { registerDeleteWikiTool } from "./tools/delete-wiki";
 import { registerForgetTool } from "./tools/forget";
 import { registerProfileTool } from "./tools/profile";
 import { registerSearchTool } from "./tools/search";
+import { registerSearchWikiTool } from "./tools/search-wiki";
 import { registerStoreTool } from "./tools/store";
+import { registerUpdateWikiTool } from "./tools/update-wiki";
 import type { OpenClawPluginApi } from "./types";
 
 type TokenPair = {
@@ -238,7 +242,6 @@ export default {
         },
       },
     );
-
     if (!client.isAuthenticated()) {
       api.logger.warn(
         "membase: missing valid OAuth tokens. Run 'openclaw membase login' to re-authenticate.",
@@ -269,8 +272,12 @@ export default {
     registerStoreTool(api, client);
     registerProfileTool(api, client);
     registerForgetTool(api, client);
+    registerSearchWikiTool(api, client);
+    registerAddWikiTool(api, client);
+    registerUpdateWikiTool(api, client);
+    registerDeleteWikiTool(api, client);
 
-    if (cfg.autoRecall) {
+    if (cfg.autoRecall || cfg.autoWikiRecall) {
       registerRecallHook(api, client, cfg);
     }
     if (cfg.autoCapture) {
@@ -293,7 +300,7 @@ export default {
       id: "openclaw-membase",
       start: () => {
         api.logger.info(
-          `membase: connected (recall: ${cfg.autoRecall}, capture: ${cfg.autoCapture})`,
+          `membase: connected (recall: ${cfg.autoRecall}, wikiRecall: ${cfg.autoWikiRecall}, capture: ${cfg.autoCapture})`,
         );
         client.registerConnection().catch(() => {});
       },
