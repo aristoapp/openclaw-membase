@@ -205,7 +205,7 @@ export function buildFooter(current: string, latest: string): string {
   return (
     "\n\n---\n" +
     `Membase plugin update available: ${current} → ${latest}\n` +
-    `Run: openclaw plugins update ${PACKAGE_NAME}`
+    "Run: openclaw plugins update openclaw-membase"
   );
 }
 
