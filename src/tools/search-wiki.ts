@@ -26,22 +26,23 @@ export function registerSearchWikiTool(
           type: "number",
           description: "Max results to return (default: 10, max: 20).",
         },
-        collection_id: {
+        collection: {
           type: "string",
-          description: "Optional collection ID to narrow results.",
+          description:
+            "Optional collection name to scope the search to a specific category.",
         },
       },
       required: ["query"],
     },
     async execute(
       _toolCallId: string,
-      params: { query: string; limit?: number; collection_id?: string },
+      params: { query: string; limit?: number; collection?: string },
     ) {
       try {
         const result = await client.searchWiki(
           params.query,
           params.limit ?? 10,
-          params.collection_id,
+          params.collection,
         );
         return await toolResponse(formatWikiDocuments(result.documents));
       } catch (err) {

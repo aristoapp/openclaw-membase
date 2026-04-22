@@ -26,9 +26,10 @@ export function registerUpdateWikiTool(
           type: "string",
           description: "New markdown content (optional).",
         },
-        collection_id: {
+        collection: {
           type: "string",
-          description: "Move document to another collection (optional).",
+          description:
+            "Move the document to a different collection by name. New collections are created on first use (optional).",
         },
       },
       required: ["doc_id"],
@@ -39,24 +40,24 @@ export function registerUpdateWikiTool(
         doc_id: string;
         title?: string;
         content?: string;
-        collection_id?: string;
+        collection?: string;
       },
     ) {
       try {
         if (
           params.title === undefined &&
           params.content === undefined &&
-          params.collection_id === undefined
+          params.collection === undefined
         ) {
           return await toolResponse(
-            "At least one update field is required (title/content/collection_id).",
+            "At least one update field is required (title/content/collection).",
           );
         }
 
         const doc = await client.updateWikiDocument(params.doc_id, {
           title: params.title,
           content: params.content,
-          collection_id: params.collection_id,
+          collection: params.collection,
         });
         return await toolResponse(
           `Wiki document updated: "${doc.title}" (ID: ${doc.id})`,

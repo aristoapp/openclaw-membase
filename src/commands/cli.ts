@@ -642,8 +642,8 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
         .option("--title <title>", "New title")
         .option("--content <content>", "New markdown content")
         .option(
-          "-c, --collection-id <collectionId>",
-          "Move to another collection",
+          "-c, --collection <collection>",
+          "Move to another collection (by name)",
         )
         .action(async (rawOpts?: unknown) => {
           if (!client.isAuthenticated()) {
@@ -656,7 +656,7 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
             docId?: string;
             title?: string;
             content?: string;
-            collectionId?: string;
+            collection?: string;
           };
           const docId =
             typeof rawOpts === "string" ? rawOpts : (opts.docId ?? "");
@@ -667,10 +667,10 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
           if (
             opts.title === undefined &&
             opts.content === undefined &&
-            opts.collectionId === undefined
+            opts.collection === undefined
           ) {
             api.logger.error(
-              "No updates supplied. Use --title, --content, and/or --collection-id.",
+              "No updates supplied. Use --title, --content, and/or --collection.",
             );
             return;
           }
@@ -678,7 +678,7 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
             const doc = await client.updateWikiDocument(docId, {
               title: opts.title,
               content: opts.content,
-              collection_id: opts.collectionId,
+              collection: opts.collection,
             });
             api.logger.info(`Wiki document updated: ${doc.title} (${doc.id})`);
           } catch (error) {

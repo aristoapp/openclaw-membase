@@ -23,9 +23,10 @@ export function registerAddWikiTool(
           description:
             "Markdown content for the wiki document. Use [[wikilinks]] to reference related topics.",
         },
-        collection_id: {
+        collection: {
           type: "string",
-          description: "Optional collection ID to place the document in.",
+          description:
+            "Collection name to file the document under. Set ONLY when the user explicitly names a collection or category (e.g., 'save to Work wiki'). New collections are created on first use. Do not guess or invent a name.",
         },
         summarize: {
           type: "boolean",
@@ -40,7 +41,7 @@ export function registerAddWikiTool(
       params: {
         title: string;
         content: string;
-        collection_id?: string;
+        collection?: string;
         summarize?: boolean;
       },
     ) {
@@ -48,7 +49,7 @@ export function registerAddWikiTool(
         const doc = await client.createWikiDocument(
           params.title,
           params.content,
-          params.collection_id,
+          params.collection,
           params.summarize,
         );
         return await toolResponse(

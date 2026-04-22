@@ -273,35 +273,38 @@ export class MembaseClient {
   async searchWiki(
     query: string,
     limit?: number,
-    collectionId?: string,
+    collection?: string,
   ): Promise<WikiSearchResponse> {
     const qs = new URLSearchParams({ query });
     if (limit !== undefined) qs.set("limit", String(limit));
-    if (collectionId) qs.set("collection_id", collectionId);
+    if (collection) qs.set("collection", collection);
     return this.request<WikiSearchResponse>(`/wiki/search?${qs.toString()}`);
   }
 
   async createWikiDocument(
     title: string,
     content: string,
-    collectionId?: string,
+    collection?: string,
     summarize?: boolean,
   ): Promise<WikiDocumentResponse> {
+    const body: Record<string, unknown> = {
+      title,
+      content,
+      source: "openclaw",
+      summarize: summarize ?? false,
+    };
+    if (collection) {
+      body.collection = collection;
+    }
     return this.request<WikiDocumentResponse>("/wiki/documents", {
       method: "POST",
-      body: JSON.stringify({
-        title,
-        content,
-        collection_id: collectionId ?? null,
-        source: "openclaw",
-        summarize: summarize ?? false,
-      }),
+      body: JSON.stringify(body),
     });
   }
 
   async updateWikiDocument(
     docId: string,
-    updates: { title?: string; content?: string; collection_id?: string },
+    updates: { title?: string; content?: string; collection?: string },
   ): Promise<WikiDocumentResponse> {
     return this.request<WikiDocumentResponse>(`/wiki/documents/${docId}`, {
       method: "PUT",
