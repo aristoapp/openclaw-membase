@@ -1,3 +1,4 @@
+import pkg from "../package.json" with { type: "json" };
 import type {
   EpisodeBundle,
   Logger,
@@ -7,6 +8,7 @@ import type {
 import { MembaseApiError } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+const USER_AGENT = `membase-openclaw/${pkg.version}`;
 
 export type TokenRefreshCallback = (tokens: {
   accessToken: string;
@@ -79,6 +81,7 @@ export class MembaseClient {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": USER_AGENT,
       },
       body: body.toString(),
       signal: AbortSignal.timeout(this.timeoutMs),
@@ -117,6 +120,7 @@ export class MembaseClient {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.accessToken}`,
+        "User-Agent": USER_AGENT,
         ...(options.headers ?? {}),
       },
     });
