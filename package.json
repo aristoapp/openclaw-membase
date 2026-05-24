@@ -3,11 +3,11 @@
   "version": "0.4.6",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aristoapp/membase.git",
-    "directory": "apps/openclaw"
+    "url": "https://github.com/aristoapp/openclaw-membase.git"
   },
   "main": "./index.ts",
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@types/bun": "^1.2.14",
     "typescript": "5.9.2"
   },
@@ -19,6 +19,7 @@
     "dist/",
     "src/",
     "skills/",
+    "examples/",
     "index.ts",
     "openclaw.plugin.json"
   ],

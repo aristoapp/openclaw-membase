@@ -1,7 +1,5 @@
 <h1 align="center">Membase Plugin for OpenClaw</h1>
 
-[![Membase banner](https://github.com/user-attachments/assets/19393af8-7af0-4e8f-9967-b5c9d8119d83)](https://membase.so/?utm_source=github&utm_medium=openclaw-membase)
-
 <p align="center">
   Persistent long-term memory for OpenClaw using hybrid vector search and a knowledge graph.
 </p>
@@ -85,6 +83,10 @@ The agent uses these tools autonomously during conversations:
 | `membase_add_wiki` | Create a wiki document from markdown content. |
 | `membase_update_wiki` | Update title/content/collection of an existing wiki document. |
 | `membase_delete_wiki` | Delete a wiki document with confirmation flow. |
+
+## Example Workflows
+
+- [Remember reviewed public X/Twitter signals from TweetClaw](./examples/tweetclaw-x-memory.md) - use TweetClaw to search tweets, search tweet replies, monitor tweets, export followers, look up users, and run giveaway draws, then store only reviewed summaries and source URLs in Membase.
 
 ## CLI Commands
 
@@ -182,4 +184,3 @@ Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 ## License
 
 [MIT](./LICENSE)
-
