@@ -1,18 +1,24 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 
 import type { MembaseClient } from "../client";
 import {
-  DEFAULT_TOKEN_FILE_PATH,
   isInsideExtensionsDir,
+  resolveDefaultTokenFilePath,
+  resolveOpenClawConfigPath,
   resolveTokenFilePath,
   writeTokenFile,
 } from "../config";
-import { formatBundles } from "../format";
+import {
+  formatBundles,
+  formatSearchProjectName,
+  formatWikiCreateResult,
+  formatWikiUpdateResult,
+} from "../format";
 import { maybePromptGithubStar } from "../star-prompt";
 import type { OpenClawPluginApi } from "../types";
+import { looksSensitive } from "../utils";
 
 type OAuthTokenResponse = {
   access_token: string;
@@ -28,14 +34,32 @@ function b64url(input: Uint8Array): string {
     .replace(/=+$/g, "");
 }
 
-function getOpenClawConfigPath(): string {
-  return join(homedir(), ".openclaw", "openclaw.json");
-}
-
 function asObject(value: unknown): JsonObject {
   return typeof value === "object" && value !== null
     ? (value as JsonObject)
     : {};
+}
+
+function splitPositionalArgs(
+  valueKey: string,
+  positionalArg?: unknown,
+  rawOpts?: unknown,
+): { value: string; opts: JsonObject } {
+  if (rawOpts !== undefined) {
+    return {
+      value: typeof positionalArg === "string" ? positionalArg : "",
+      opts: asObject(rawOpts),
+    };
+  }
+  if (typeof positionalArg === "string") {
+    return { value: positionalArg, opts: {} };
+  }
+  const opts = asObject(positionalArg);
+  const rawValue = opts[valueKey];
+  return {
+    value: typeof rawValue === "string" ? rawValue : "",
+    opts,
+  };
 }
 
 async function openAuthUrl(
@@ -234,7 +258,7 @@ async function startOAuthCallbackListener(
 export async function upsertPluginConfig(
   nextConfig: JsonObject,
 ): Promise<void> {
-  const configPath = getOpenClawConfigPath();
+  const configPath = resolveOpenClawConfigPath();
   const configDir = dirname(configPath);
   await mkdir(configDir, { recursive: true });
 
@@ -267,7 +291,7 @@ export async function upsertPluginConfig(
 const PLUGIN_ID = "openclaw-membase";
 
 export async function ensureToolsAllowlist(): Promise<boolean> {
-  const configPath = getOpenClawConfigPath();
+  const configPath = resolveOpenClawConfigPath();
 
   let root: JsonObject = {};
   try {
@@ -306,7 +330,7 @@ export async function ensureToolsAllowlist(): Promise<boolean> {
 }
 
 async function readCurrentPluginConfig(): Promise<JsonObject> {
-  const configPath = getOpenClawConfigPath();
+  const configPath = resolveOpenClawConfigPath();
   try {
     const root = asObject(JSON.parse(await readFile(configPath, "utf-8")));
     const plugins = asObject(root.plugins);
@@ -384,7 +408,9 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
     description: (text: string) => CommandLike;
     command: (name: string) => CommandLike;
     option: (flags: string, desc: string, defaultValue?: string) => CommandLike;
-    action: (handler: (opts?: unknown) => Promise<void> | void) => CommandLike;
+    action: (
+      handler: (...args: unknown[]) => Promise<void> | void,
+    ) => CommandLike;
   };
 
   type ProgramLike = {
@@ -460,7 +486,7 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
           const existingConfig = await readCurrentPluginConfig();
           let tokenFile = resolveTokenFilePath(existingConfig);
           if (isInsideExtensionsDir(tokenFile)) {
-            tokenFile = DEFAULT_TOKEN_FILE_PATH;
+            tokenFile = resolveDefaultTokenFilePath();
           }
           writeTokenFile(tokenFile, {
             accessToken: tokens.access_token,
@@ -488,20 +514,20 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
           "-s, --sources <sources>",
           "Comma-separated source filter (e.g. slack,gmail)",
         )
-        .action(async (rawOpts?: unknown) => {
+        .action(async (queryArg?: unknown, rawOpts?: unknown) => {
           if (!client.isAuthenticated()) {
             api.logger.warn(
               "Not logged in. Run 'openclaw membase login' first.",
             );
             return;
           }
-          const opts = (rawOpts ?? {}) as {
+          const parsed = splitPositionalArgs("query", queryArg, rawOpts);
+          const opts = parsed.opts as {
             query?: string;
             limit?: string;
             sources?: string;
           };
-          const query =
-            typeof rawOpts === "string" ? rawOpts : (opts.query ?? "");
+          const query = parsed.value || opts.query || "";
           const limit = Math.min(
             Number.parseInt(opts.limit ?? "10", 10) || 10,
             100,
@@ -535,34 +561,41 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
         .command("wiki-search <query>")
         .description("Search wiki documents")
         .option("-l, --limit <limit>", "Max results", "10")
+        .option("--project <project>", "Optional Wiki filing location filter")
         .option(
-          "-c, --collection-id <collectionId>",
-          "Optional wiki collection filter",
+          "-c, --collection <collection>",
+          "Deprecated alias for --project",
         )
-        .action(async (rawOpts?: unknown) => {
+        .option(
+          "--collection-id <collectionId>",
+          "Optional wiki collection UUID filter",
+        )
+        .action(async (queryArg?: unknown, rawOpts?: unknown) => {
           if (!client.isAuthenticated()) {
             api.logger.warn(
               "Not logged in. Run 'openclaw membase login' first.",
             );
             return;
           }
-          const opts = (rawOpts ?? {}) as {
+          const parsed = splitPositionalArgs("query", queryArg, rawOpts);
+          const opts = parsed.opts as {
             query?: string;
             limit?: string;
+            project?: string;
+            collection?: string;
             collectionId?: string;
           };
-          const query =
-            typeof rawOpts === "string" ? rawOpts : (opts.query ?? "");
+          const query = parsed.value || opts.query || "";
           const limit = Math.min(
             Number.parseInt(opts.limit ?? "10", 10) || 10,
             20,
           );
           try {
-            const result = await client.searchWiki(
-              query,
-              limit,
-              opts.collectionId,
-            );
+            const result = await client.searchWiki(query, limit, {
+              project: opts.project,
+              collection: opts.collection,
+              collectionId: opts.collectionId,
+            });
             if (result.documents.length === 0) {
               console.log("No wiki documents found.");
               return;
@@ -570,9 +603,12 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
             for (const [index, doc] of result.documents.entries()) {
               console.log(`${index + 1}. ${doc.title}`);
               console.log(`   ID: ${doc.id}`);
-              if (doc.collection_name) {
-                console.log(`   Collection: ${doc.collection_name}`);
-              }
+              console.log(
+                `   Project: ${formatSearchProjectName(
+                  doc.collection_id,
+                  doc.collection_name,
+                )}`,
+              );
               if (doc.content) {
                 console.log(`   ${doc.content}`);
               }
@@ -589,27 +625,27 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
       membase
         .command("wiki-add <title>")
         .description("Add a wiki document")
-        .option("--content <content>", "Markdown content")
+        .option("--content <content>", "Full markdown content")
+        .option("--project <project>", "Optional Wiki filing location")
         .option(
-          "-c, --collection-id <collectionId>",
-          "Optional wiki collection ID",
+          "-c, --collection <collection>",
+          "Deprecated alias for --project",
         )
-        .option("--summarize", "Generate a structured summary")
-        .action(async (rawOpts?: unknown) => {
+        .action(async (titleArg?: unknown, rawOpts?: unknown) => {
           if (!client.isAuthenticated()) {
             api.logger.warn(
               "Not logged in. Run 'openclaw membase login' first.",
             );
             return;
           }
-          const opts = (rawOpts ?? {}) as {
+          const parsed = splitPositionalArgs("title", titleArg, rawOpts);
+          const opts = parsed.opts as {
             title?: string;
             content?: string;
-            collectionId?: string;
-            summarize?: boolean;
+            project?: string;
+            collection?: string;
           };
-          const title =
-            typeof rawOpts === "string" ? rawOpts : (opts.title ?? "");
+          const title = parsed.value || opts.title || "";
           if (!title.trim()) {
             api.logger.error("Missing wiki title.");
             return;
@@ -620,14 +656,20 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
             );
             return;
           }
-          try {
-            const doc = await client.createWikiDocument(
-              title,
-              opts.content,
-              opts.collectionId,
-              Boolean(opts.summarize),
+          if (looksSensitive(opts.content)) {
+            api.logger.error(
+              "Wiki add failed: content appears to contain secrets or private credentials. Redact it before saving.",
             );
-            api.logger.info(`Wiki document created: ${doc.title} (${doc.id})`);
+            return;
+          }
+          try {
+            const doc = await client.createWikiDocument(title, opts.content, {
+              project: opts.project,
+              collection: opts.collection,
+            });
+            api.logger.info(
+              formatWikiCreateResult(doc, opts.project ?? opts.collection),
+            );
           } catch (error) {
             api.logger.error(
               "Wiki add failed:",
@@ -640,26 +682,32 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
         .command("wiki-update <docId>")
         .description("Update a wiki document")
         .option("--title <title>", "New title")
-        .option("--content <content>", "New markdown content")
+        .option("--content <content>", "Full replacement markdown content")
+        .option("--project <project>", "Move to another Project by name")
         .option(
           "-c, --collection <collection>",
-          "Move to another collection (by name)",
+          "Deprecated alias for --project",
         )
-        .action(async (rawOpts?: unknown) => {
+        .option("--clear-project", "Move the document to Basic/default Project")
+        .option("--clear-collection", "Deprecated alias for --clear-project")
+        .action(async (docIdArg?: unknown, rawOpts?: unknown) => {
           if (!client.isAuthenticated()) {
             api.logger.warn(
               "Not logged in. Run 'openclaw membase login' first.",
             );
             return;
           }
-          const opts = (rawOpts ?? {}) as {
+          const parsed = splitPositionalArgs("docId", docIdArg, rawOpts);
+          const opts = parsed.opts as {
             docId?: string;
             title?: string;
             content?: string;
+            project?: string;
             collection?: string;
+            clearProject?: boolean;
+            clearCollection?: boolean;
           };
-          const docId =
-            typeof rawOpts === "string" ? rawOpts : (opts.docId ?? "");
+          const docId = parsed.value || opts.docId || "";
           if (!docId.trim()) {
             api.logger.error("Missing docId.");
             return;
@@ -667,20 +715,41 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
           if (
             opts.title === undefined &&
             opts.content === undefined &&
-            opts.collection === undefined
+            opts.project === undefined &&
+            opts.collection === undefined &&
+            !opts.clearProject &&
+            !opts.clearCollection
           ) {
             api.logger.error(
-              "No updates supplied. Use --title, --content, and/or --collection.",
+              "No updates supplied. Use --title, --content, --project, and/or --clear-project.",
+            );
+            return;
+          }
+          if (
+            typeof opts.content === "string" &&
+            looksSensitive(opts.content)
+          ) {
+            api.logger.error(
+              "Wiki update failed: content appears to contain secrets or private credentials. Redact it before saving.",
             );
             return;
           }
           try {
+            const clearProject = Boolean(
+              opts.clearProject || opts.clearCollection,
+            );
             const doc = await client.updateWikiDocument(docId, {
               title: opts.title,
               content: opts.content,
+              project: clearProject ? null : opts.project,
               collection: opts.collection,
             });
-            api.logger.info(`Wiki document updated: ${doc.title} (${doc.id})`);
+            api.logger.info(
+              formatWikiUpdateResult(
+                doc,
+                clearProject ? null : (opts.project ?? opts.collection),
+              ),
+            );
           } catch (error) {
             api.logger.error(
               "Wiki update failed:",
@@ -692,16 +761,16 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
       membase
         .command("wiki-delete <docId>")
         .description("Delete a wiki document by ID")
-        .action(async (rawOpts?: unknown) => {
+        .action(async (docIdArg?: unknown, rawOpts?: unknown) => {
           if (!client.isAuthenticated()) {
             api.logger.warn(
               "Not logged in. Run 'openclaw membase login' first.",
             );
             return;
           }
-          const opts = (rawOpts ?? {}) as { docId?: string };
-          const docId =
-            typeof rawOpts === "string" ? rawOpts : (opts.docId ?? "");
+          const parsed = splitPositionalArgs("docId", docIdArg, rawOpts);
+          const opts = parsed.opts as { docId?: string };
+          const docId = parsed.value || opts.docId || "";
           if (!docId.trim()) {
             api.logger.error("Missing docId.");
             return;
@@ -746,7 +815,7 @@ export function registerCli(api: OpenClawPluginApi, client: MembaseClient) {
             const existingConfig = await readCurrentPluginConfig();
             let tokenFile = resolveTokenFilePath(existingConfig);
             if (isInsideExtensionsDir(tokenFile)) {
-              tokenFile = DEFAULT_TOKEN_FILE_PATH;
+              tokenFile = resolveDefaultTokenFilePath();
             }
             writeTokenFile(tokenFile, {
               accessToken: "",

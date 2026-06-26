@@ -3,19 +3,22 @@ import { formatBundles } from "../format";
 import type { OpenClawPluginApi } from "../types";
 import { toolResponse } from "../update-check";
 
-const MEMORY_SOURCES = [
+export const MEMORY_SOURCES = [
   "cursor",
   "claude-desktop",
   "claude-code",
   "vscode",
   "chatgpt",
+  "codex",
   "gemini-cli",
   "opencode",
   "poke",
   "openclaw",
+  "hermes",
   "google-calendar",
   "gmail",
   "slack",
+  "notion",
   "chatgpt-import",
   "claude-import",
   "gemini-import",
@@ -89,9 +92,9 @@ export function registerSearchTool(
           description:
             "Optional. Filter results to specific memory sources. " +
             "Integrations: 'slack', 'gmail', 'google-calendar'. " +
-            "AI clients: 'cursor', 'claude-desktop', 'claude-code', 'vscode', 'chatgpt', 'gemini-cli', 'opencode', 'poke', 'openclaw'. " +
+            "AI clients: 'cursor', 'claude-desktop', 'claude-code', 'vscode', 'chatgpt', 'codex', 'gemini-cli', 'opencode', 'poke', 'openclaw', 'hermes'. " +
             "Imports: 'chatgpt-import', 'claude-import', 'gemini-import'. " +
-            "Other: 'web-dashboard', 'api-direct'. " +
+            "Other: 'notion', 'web-dashboard', 'api-direct'. " +
             "Example: ['slack', 'gmail'] returns only Slack and Gmail memories.",
         },
         project: {
@@ -128,6 +131,7 @@ export function registerSearchTool(
           params.sources,
           params.project,
         );
+        await client.recordAgentUsage();
         return await toolResponse(formatBundles(bundles));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

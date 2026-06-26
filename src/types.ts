@@ -19,7 +19,6 @@ export interface ToolDefinition {
   label: string;
   description: string;
   parameters: Record<string, unknown>;
-  // biome-ignore lint: OpenClaw calls execute with tool-specific param shapes
   execute: (toolCallId: string, params: any) => Promise<ToolResult>;
 }
 
@@ -76,6 +75,9 @@ export interface EdgeResponse {
   source_node_uuid?: string;
   target_node_uuid?: string;
   created_at: string | null;
+  valid_at?: string | null;
+  invalid_at?: string | null;
+  expired_at?: string | null;
 }
 
 export interface EpisodeBundle {
@@ -91,11 +93,53 @@ export interface WikiSearchDocument {
   content: string;
   metadata: Record<string, unknown>;
   source: string;
+  source_status?: string | null;
+  source_warning?: string | null;
+  source_last_checked_at?: string | null;
+  source_references?: WikiSourceReference[];
   collection_id: string | null;
   collection_name: string | null;
   similarity: number | null;
   created_at: string | null;
   updated_at: string | null;
+  recent_at?: string | null;
+  routing?: WikiDocumentRoutingInfo | null;
+  merged_into_document_id?: string | null;
+  merged_at?: string | null;
+  merged_by_proposal_id?: string | null;
+}
+
+export interface WikiSourceReference {
+  id?: string | null;
+  source: string;
+  source_category?: string | null;
+  import_format?: string | null;
+  external_id?: string | null;
+  url?: string | null;
+  source_path?: string | null;
+  title?: string | null;
+  status?: string | null;
+  warning?: string | null;
+  last_seen_at?: string | null;
+  last_synced_at?: string | null;
+  source_created_at?: string | null;
+  source_last_edited_at?: string | null;
+  truncated?: boolean;
+  link_type: "primary" | "supporting" | "derived" | "updated";
+}
+
+export interface WikiDocumentRoutingInfo {
+  collection_id?: string | null;
+  collection_name?: string | null;
+  routing_source?:
+    | "collection_id"
+    | "explicit_project"
+    | "legacy_collection"
+    | "auto_route"
+    | "fallback_uncategorized";
+  reason?: string | null;
+  fallback?: boolean;
+  confidence?: number | null;
 }
 
 export interface WikiSearchResponse {
@@ -112,6 +156,15 @@ export interface WikiDocumentResponse {
   metadata: Record<string, unknown>;
   status: string;
   source: string;
+  source_status?: string | null;
+  source_warning?: string | null;
+  source_last_checked_at?: string | null;
+  source_references?: WikiSourceReference[];
+  routing?: WikiDocumentRoutingInfo | null;
+  recent_at?: string | null;
+  merged_into_document_id?: string | null;
+  merged_at?: string | null;
+  merged_by_proposal_id?: string | null;
   created_at: string;
   updated_at: string;
 }

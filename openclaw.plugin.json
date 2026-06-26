@@ -37,7 +37,7 @@
     },
     "autoCapture": {
       "label": "Auto-Capture",
-      "help": "Automatically store conversations to memory"
+      "help": "Automatically store user/assistant conversation transcripts to Wiki"
     },
     "maxRecallChars": {
       "label": "Max Recall Context Size",

@@ -69,6 +69,7 @@ export function registerProfileTool(
           }
         }
 
+        await client.recordAgentUsage();
         return await toolResponse(formatProfile(profile, allBundles));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

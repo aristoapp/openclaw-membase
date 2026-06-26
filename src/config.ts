@@ -20,12 +20,31 @@ export const DEFAULT_TOKEN_FILE_PATH = join(
   "openclaw-membase.json",
 );
 
+export function resolveOpenClawStateDir(): string {
+  const configured = process.env.OPENCLAW_STATE_DIR?.trim();
+  return configured ? expandHomePath(configured) : join(homedir(), ".openclaw");
+}
+
+export function resolveOpenClawConfigPath(): string {
+  const configured = process.env.OPENCLAW_CONFIG_PATH?.trim();
+  return configured
+    ? expandHomePath(configured)
+    : join(resolveOpenClawStateDir(), "openclaw.json");
+}
+
+export function resolveDefaultTokenFilePath(): string {
+  return join(
+    resolveOpenClawStateDir(),
+    "credentials",
+    "openclaw-membase.json",
+  );
+}
+
 // Returns true if a path is inside extensions/ — that directory is fully replaced
 // whenever openclaw plugins update/reinstall, so token files stored there will be lost.
 export function isInsideExtensionsDir(tokenFile: string): boolean {
   const normalized = tokenFile.split("\\").join("/");
-  const extensionsMarker = "/.openclaw/extensions/";
-  return normalized.includes(extensionsMarker);
+  return normalized.includes("/extensions/");
 }
 
 const KNOWN_KEYS = new Set([
@@ -85,7 +104,7 @@ export function resolveTokenFilePath(
   pluginConfig: Record<string, unknown> = {},
 ): string {
   const configured = str(pluginConfig.tokenFile, "");
-  return expandHomePath(configured || DEFAULT_TOKEN_FILE_PATH);
+  return expandHomePath(configured || resolveDefaultTokenFilePath());
 }
 
 export function readTokenFile(

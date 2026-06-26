@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { MembaseClient } from "./client";
 import {
   ensureToolsAllowlist,
@@ -8,17 +8,19 @@ import {
   upsertPluginConfig,
 } from "./commands/cli";
 import {
-  DEFAULT_TOKEN_FILE_PATH,
   isInsideExtensionsDir,
   isRedactedTokenValue,
   parseConfig,
   readTokenFile,
+  resolveDefaultTokenFilePath,
+  resolveOpenClawConfigPath,
   resolveTokenFilePath,
   writeTokenFile,
 } from "./config";
 import { flushAllBuffers, registerCaptureHook } from "./hooks/capture";
 import { registerRecallHook } from "./hooks/recall";
 import { registerAddWikiTool } from "./tools/add-wiki";
+import { registerCurrentDateTool } from "./tools/current-date";
 import { registerDeleteWikiTool } from "./tools/delete-wiki";
 import { registerForgetTool } from "./tools/forget";
 import { registerProfileTool } from "./tools/profile";
@@ -63,7 +65,7 @@ function readTokensFromConfigObject(
 function readRawPluginConfigFromDisk(
   logger: OpenClawPluginApi["logger"],
 ): Record<string, unknown> {
-  const configPath = join(homedir(), ".openclaw", "openclaw.json");
+  const configPath = resolveOpenClawConfigPath();
   try {
     const root = asObject(JSON.parse(readFileSync(configPath, "utf-8")));
     const plugins = asObject(root.plugins);
@@ -76,6 +78,55 @@ function readRawPluginConfigFromDisk(
     );
     return {};
   }
+}
+
+function readKnownWikiProjectsCache(
+  cachePath: string,
+  logger: OpenClawPluginApi["logger"],
+): string[] {
+  try {
+    const parsed = JSON.parse(readFileSync(cachePath, "utf-8"));
+    return Array.isArray(parsed)
+      ? parsed.filter((value): value is string => typeof value === "string")
+      : [];
+  } catch (error) {
+    const code =
+      typeof error === "object" && error && "code" in error
+        ? (error as { code?: string }).code
+        : undefined;
+    if (code !== "ENOENT") {
+      logger.warn(
+        `membase: failed to read known wiki Projects cache: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    return [];
+  }
+}
+
+function refreshKnownWikiProjectsCache(
+  client: MembaseClient,
+  cachePath: string,
+  logger: OpenClawPluginApi["logger"],
+): void {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  Promise.race([
+    client.getKnownWikiProjects(),
+    new Promise<null>((resolve) => {
+      timeout = setTimeout(() => resolve(null), 1800);
+    }),
+  ])
+    .then(async (projects) => {
+      if (timeout) clearTimeout(timeout);
+      if (projects === null) return;
+      await mkdir(dirname(cachePath), { recursive: true });
+      await writeFile(cachePath, JSON.stringify(projects, null, 2), "utf-8");
+    })
+    .catch((error) => {
+      if (timeout) clearTimeout(timeout);
+      logger.warn(
+        `membase: failed to refresh known wiki Projects cache: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
 }
 
 export default {
@@ -96,7 +147,7 @@ export default {
     let pathMigrationPromise: Promise<void> | null = null;
 
     if (isInsideExtensionsDir(configuredTokenFile)) {
-      effectiveTokenFile = DEFAULT_TOKEN_FILE_PATH;
+      effectiveTokenFile = resolveDefaultTokenFilePath();
       const oldTokens = readTokenFile(configuredTokenFile, api.logger);
 
       if (hasTokenValues(oldTokens)) {
@@ -271,13 +322,24 @@ export default {
       return;
     }
 
+    const knownProjectsCachePath = join(
+      dirname(cfg.tokenFile),
+      "openclaw-membase-known-projects.json",
+    );
+    const knownWikiProjects = readKnownWikiProjectsCache(
+      knownProjectsCachePath,
+      api.logger,
+    );
+    refreshKnownWikiProjectsCache(client, knownProjectsCachePath, api.logger);
+
     registerSearchTool(api, client);
+    registerCurrentDateTool(api);
     registerStoreTool(api, client);
     registerProfileTool(api, client);
     registerForgetTool(api, client);
-    registerSearchWikiTool(api, client);
-    registerAddWikiTool(api, client);
-    registerUpdateWikiTool(api, client);
+    registerSearchWikiTool(api, client, knownWikiProjects);
+    registerAddWikiTool(api, client, knownWikiProjects);
+    registerUpdateWikiTool(api, client, knownWikiProjects);
     registerDeleteWikiTool(api, client);
 
     if (cfg.autoRecall || cfg.autoWikiRecall) {

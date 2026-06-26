@@ -6,8 +6,9 @@ import type {
   WikiSearchResponse,
 } from "./types";
 import { MembaseApiError } from "./types";
+import { resolveWikiProjectInput } from "./wiki-project";
 
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 180_000;
 const USER_AGENT = `membase-openclaw/${pkg.version}`;
 
 export type TokenRefreshCallback = (tokens: {
@@ -270,35 +271,71 @@ export class MembaseClient {
         body: JSON.stringify({ source: "openclaw" }),
       });
     } catch {
-      // fire-and-forget: don't fail plugin startup for analytics
+      // Best-effort registration; never block plugin startup on this signal.
+    }
+  }
+
+  async recordAgentUsage(): Promise<void> {
+    try {
+      await this.request("/agents/usage", {
+        method: "POST",
+        body: JSON.stringify({ source: "openclaw" }),
+      });
+    } catch {
+      // Best-effort dashboard signal; never fail the user-facing tool result.
     }
   }
 
   async searchWiki(
     query: string,
     limit?: number,
-    collection?: string,
+    options?: {
+      project?: string;
+      collection?: string;
+      collectionId?: string;
+    },
   ): Promise<WikiSearchResponse> {
+    const projectInput = resolveWikiProjectInput(options ?? {});
+    if (projectInput.error) {
+      throw new MembaseApiError(projectInput.error, 400);
+    }
     const qs = new URLSearchParams({ query });
     if (limit !== undefined) qs.set("limit", String(limit));
-    if (collection) qs.set("collection", collection);
+    if (projectInput.value) qs.set("project", projectInput.value);
+    if (options?.collectionId) qs.set("collection_id", options.collectionId);
     return this.request<WikiSearchResponse>(`/wiki/search?${qs.toString()}`);
+  }
+
+  async getKnownWikiProjects(): Promise<string[]> {
+    return this.request<string[]>("/wiki/collections/known");
   }
 
   async createWikiDocument(
     title: string,
     content: string,
-    collection?: string,
-    summarize?: boolean,
+    options?: {
+      project?: string;
+      collection?: string;
+      sourceMetadata?: Record<string, unknown>;
+    },
   ): Promise<WikiDocumentResponse> {
+    const projectInput = resolveWikiProjectInput(options ?? {});
+    if (projectInput.error) {
+      throw new MembaseApiError(projectInput.error, 400);
+    }
     const body: Record<string, unknown> = {
       title,
       content,
       source: "openclaw",
-      summarize: summarize ?? false,
+      source_metadata: {
+        ...(options?.sourceMetadata ?? {}),
+        plugin_name: "openclaw-membase",
+        plugin_version: pkg.version,
+        host: "openclaw",
+      },
     };
-    if (collection) {
-      body.collection = collection;
+    if (projectInput.value) {
+      body.project = projectInput.value;
     }
     return this.request<WikiDocumentResponse>("/wiki/documents", {
       method: "POST",
@@ -308,11 +345,30 @@ export class MembaseClient {
 
   async updateWikiDocument(
     docId: string,
-    updates: { title?: string; content?: string; collection?: string },
+    updates: {
+      title?: string;
+      content?: string;
+      project?: string | null;
+      collection?: string;
+      collection_id?: null;
+    },
   ): Promise<WikiDocumentResponse> {
+    const projectInput = resolveWikiProjectInput(updates);
+    if (projectInput.error) {
+      throw new MembaseApiError(projectInput.error, 400);
+    }
+    const body: Record<string, unknown> = {};
+    if (updates.title !== undefined) body.title = updates.title;
+    if (updates.content !== undefined) body.content = updates.content;
+    if (updates.collection_id === null || projectInput.value === null) {
+      body.collection_id = null;
+    } else if (projectInput.value !== undefined) {
+      body.project = projectInput.value;
+    }
+
     return this.request<WikiDocumentResponse>(`/wiki/documents/${docId}`, {
       method: "PUT",
-      body: JSON.stringify(updates),
+      body: JSON.stringify(body),
     });
   }
 

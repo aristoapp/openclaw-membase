@@ -163,7 +163,7 @@ describe("refreshLatestVersion", () => {
     let fetched = false;
     await refreshLatestVersion({
       loadStateFn: async () => ({
-        checked_at: new Date(today.getTime() - 60_000).toISOString(),
+        checked_at: new Date(Date.now() - 60_000).toISOString(),
         current_version: "0.4.2",
         latest_version: "0.5.0",
         shown_at: null,
