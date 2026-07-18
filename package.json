@@ -7,7 +7,6 @@
   },
   "main": "./index.ts",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
     "@types/bun": "^1.2.14",
     "openclaw": "2026.6.10",
     "typescript": "5.9.2"
@@ -18,7 +17,7 @@
   "overrides": {
     "tar": "7.5.16"
   },
-  "description": "Membase plugin for OpenClaw — persistent long-term memory for AI agents",
+  "description": "Membase plugin for OpenClaw - persistent long-term memory for AI agents",
   "files": [
     "dist/",
     "src/client.ts",

@@ -29,6 +29,16 @@ const pendingDocumentBuffers = new Map<
 const silenceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let flushSequence = 0;
 
+export function clearCaptureState(): void {
+  for (const timer of silenceTimers.values()) {
+    clearTimeout(timer);
+  }
+  messageBuffers.clear();
+  pendingDocumentBuffers.clear();
+  silenceTimers.clear();
+  flushSequence = 0;
+}
+
 function getChannelKey(event: Record<string, unknown>): string {
   // Prefer the top-level sessionKey from newer OpenClaw event payloads.
   // Fall back to the legacy session object shape, then to "default".

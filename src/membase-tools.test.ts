@@ -7,7 +7,11 @@ import {
   resolveTokenFilePath,
 } from "./config";
 import { formatBundles, formatWikiDocument } from "./format";
-import { flushAllBuffers, registerCaptureHook } from "./hooks/capture";
+import {
+  clearCaptureState,
+  flushAllBuffers,
+  registerCaptureHook,
+} from "./hooks/capture";
 import { registerAddWikiTool } from "./tools/add-wiki";
 import {
   buildCurrentDateText,
@@ -23,6 +27,7 @@ const originalFetch = globalThis.fetch;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  clearCaptureState();
 });
 
 function makeApi(): { api: OpenClawPluginApi; tools: ToolDefinition[] } {

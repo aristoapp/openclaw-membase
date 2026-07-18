@@ -62,9 +62,14 @@ export function registerAddWikiTool(
           return await toolResponse(`Add wiki failed: ${projectInput.error}`);
         }
         if (looksSensitive(params.content)) {
-          return await toolResponse(
-            "Add wiki failed: content appears to contain secrets or private credentials. Redact it before saving.",
-          );
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Add wiki failed: content appears to contain secrets or private credentials. Redact it before saving.",
+              },
+            ],
+          };
         }
         const doc = await client.createWikiDocument(
           params.title,
