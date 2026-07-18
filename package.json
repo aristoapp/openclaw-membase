@@ -17,7 +17,7 @@
   "overrides": {
     "tar": "7.5.16"
   },
-  "description": "Membase plugin for OpenClaw — persistent long-term memory for AI agents",
+  "description": "Membase plugin for OpenClaw - persistent long-term memory for AI agents",
   "files": [
     "dist/",
     "src/client.ts",
@@ -33,6 +33,7 @@
     "src/utils.ts",
     "src/wiki-project.ts",
     "skills/",
+    "examples/",
     "index.ts",
     "openclaw.plugin.json"
   ],

@@ -78,9 +78,14 @@ export function registerUpdateWikiTool(
           typeof params.content === "string" &&
           looksSensitive(params.content)
         ) {
-          return await toolResponse(
-            "Update wiki failed: content appears to contain secrets or private credentials. Redact it before saving.",
-          );
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Update wiki failed: content appears to contain secrets or private credentials. Redact it before saving.",
+              },
+            ],
+          };
         }
 
         const updates: Parameters<MembaseClient["updateWikiDocument"]>[1] = {

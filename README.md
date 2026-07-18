@@ -1,7 +1,5 @@
 <h1 align="center">Membase Plugin for OpenClaw</h1>
 
-[![Membase banner](https://github.com/user-attachments/assets/19393af8-7af0-4e8f-9967-b5c9d8119d83)](https://membase.so/?utm_source=github&utm_medium=openclaw-membase)
-
 <p align="center">
   Persistent long-term memory for OpenClaw using hybrid vector search and a knowledge graph.
 </p>
@@ -20,7 +18,7 @@
 
 Give your [OpenClaw](https://openclaw.ai/) agent persistent memory that survives across sessions. Membase uses hybrid vector search + knowledge graph to remember not just text, but entities, relationships, and facts.
 
-> **Free to start** — Sign up at [app.membase.so](https://app.membase.so) and connect in under a minute.
+> **Free to start** - Sign up at [app.membase.so](https://app.membase.so) and connect in under a minute.
 
 ## Install
 
@@ -77,7 +75,7 @@ The agent uses these tools autonomously during conversations:
 
 | Tool | Description |
 | --- | --- |
-| `membase_search` | Search memories by semantic similarity. Supports date filtering (`date_from`, `date_to`, `timezone`) and source filtering (`sources` — integrations, AI clients including `codex`/`hermes`, imports, `notion`, and other sources). Returns episode bundles with related facts and relevance scores. |
+| `membase_search` | Search memories by semantic similarity. Supports date filtering (`date_from`, `date_to`, `timezone`) and source filtering (`sources` - integrations, AI clients including `codex`/`hermes`, imports, `notion`, and other sources). Returns episode bundles with related facts and relevance scores. |
 | `membase_get_current_date` | Return runtime local and UTC time before converting relative dates into `date_from`/`date_to`. |
 | `membase_store` | Save important information to long-term memory. Proactively stores preferences, goals, and context. |
 | `membase_forget` | Delete a memory. Shows matches first, then deletes after user confirmation (two-step). |
@@ -87,10 +85,14 @@ The agent uses these tools autonomously during conversations:
 | `membase_update_wiki` | Update title/content/Project for an existing wiki document. Set Project to `null` to move to Basic. Reports the returned destination. |
 | `membase_delete_wiki` | Delete a wiki document with confirmation flow. |
 
+## Example Workflows
+
+- [Remember reviewed public X/Twitter signals from TweetClaw](./examples/tweetclaw-x-memory.md) - gather public X context with TweetClaw, then store reviewed summaries and source URLs in Membase Wiki.
+
 ## CLI Commands
 
 ```bash
-openclaw membase login              # OAuth login (PKCE) — opens browser
+openclaw membase login              # OAuth login (PKCE) - opens browser
 openclaw membase logout             # Remove stored tokens
 openclaw membase search <query>     # Search memories
 openclaw membase search <query> -s slack,gmail  # Filter by source
@@ -175,14 +177,14 @@ bun run build
 
 ## Contributing
 
-Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+Contributions welcome - see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ## Links
 
-- [Membase](https://membase.so/?utm_source=github&utm_medium=openclaw-membase) — Website
-- [Dashboard](https://app.membase.so) — Manage your memories
-- [Docs](https://docs.membase.so) — Full documentation
-- [OpenClaw](https://openclaw.ai/) — AI agent framework
+- [Membase](https://membase.so/?utm_source=github&utm_medium=openclaw-membase) - Website
+- [Dashboard](https://app.membase.so) - Manage your memories
+- [Docs](https://docs.membase.so) - Full documentation
+- [OpenClaw](https://openclaw.ai/) - AI agent framework
 
 ## License
 
