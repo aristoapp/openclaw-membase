@@ -33,15 +33,16 @@ export function registerDeleteWikiTool(
         },
         collection_id: {
           type: "string",
-          description: "Optional collection filter used during search mode.",
+          description:
+            "Optional collection UUID filter used only during search mode to narrow delete candidates.",
         },
       },
-      required: ["query"],
+      required: [],
     },
     async execute(
       _toolCallId: string,
       params: {
-        query: string;
+        query?: string;
         doc_id?: string;
         confirm?: boolean;
         collection_id?: string;
@@ -50,16 +51,22 @@ export function registerDeleteWikiTool(
       try {
         if (params.confirm && params.doc_id) {
           await client.deleteWikiDocument(params.doc_id);
+          await client.recordAgentUsage();
           return await toolResponse(
             `Wiki document deleted (ID: ${params.doc_id})`,
           );
         }
 
-        const result = await client.searchWiki(
-          params.query,
-          5,
-          params.collection_id,
-        );
+        if (!params.query?.trim()) {
+          return await toolResponse(
+            "query is required unless confirm=true and doc_id is provided.",
+          );
+        }
+
+        const result = await client.searchWiki(params.query, 5, {
+          collectionId: params.collection_id,
+        });
+        await client.recordAgentUsage();
         if (result.documents.length === 0) {
           return await toolResponse("No matching wiki document found.");
         }

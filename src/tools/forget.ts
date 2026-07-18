@@ -46,10 +46,12 @@ export function registerForgetTool(
       try {
         if (params.confirm && params.uuid) {
           await client.deleteMemory(params.uuid);
+          await client.recordAgentUsage();
           return await toolResponse(`Memory deleted (${params.uuid}).`);
         }
 
         const bundles = await client.search(params.query, 5);
+        await client.recordAgentUsage();
         if (bundles.length === 0) {
           return await toolResponse("No matching memory found to forget.");
         }

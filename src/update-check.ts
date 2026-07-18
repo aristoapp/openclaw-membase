@@ -186,7 +186,7 @@ export async function consumeUpdateFooter(
   const now = deps.now?.() ?? new Date();
 
   const state = await load();
-  if (!state || !state.latest_version) return null;
+  if (!state?.latest_version) return null;
   if (state.current_version !== current) return null;
   if (!isNewerVersion(state.latest_version, current)) return null;
   if (isSameUtcDay(state.shown_at, now)) return null;

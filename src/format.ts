@@ -1,4 +1,10 @@
-import type { EpisodeBundle, WikiSearchDocument } from "./types";
+import type {
+  EpisodeBundle,
+  WikiDocumentResponse,
+  WikiDocumentRoutingInfo,
+  WikiSearchDocument,
+  WikiSourceReference,
+} from "./types";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -57,11 +63,210 @@ function safeScore(value: number | null | undefined): number | null {
   return value;
 }
 
-export function formatBundle(
-  bundle: EpisodeBundle,
-  index: number,
-  topScore: number | null = null,
+function stringAttribute(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeProjectName(value: string | null | undefined): string {
+  return value?.trim() ?? "";
+}
+
+export function formatSearchProjectName(
+  collectionId: string | null | undefined,
+  collectionName: string | null | undefined,
 ): string {
+  return (
+    normalizeProjectName(collectionName) || (collectionId ? "Unknown" : "Basic")
+  );
+}
+
+export function appendResultSentence(base: string, sentence?: string): string {
+  return sentence ? `${base}. ${sentence}` : base;
+}
+
+export function formatSavedDestination(
+  routing: WikiDocumentRoutingInfo | null | undefined,
+  collectionId: string | null | undefined,
+  explicitProject?: string,
+): string | undefined {
+  if (routing?.fallback) {
+    return "Saved to Basic because no confident Project was found.";
+  }
+
+  const routedProjectName = normalizeProjectName(routing?.collection_name);
+  if (routedProjectName) {
+    return `Saved to Project: ${routedProjectName}.`;
+  }
+
+  const explicitProjectName = normalizeProjectName(explicitProject);
+  if (explicitProjectName && collectionId) {
+    return `Saved to Project: ${explicitProjectName}.`;
+  }
+
+  if (!collectionId) {
+    return "Saved to Basic.";
+  }
+
+  return undefined;
+}
+
+export function formatMovedDestination(
+  project: string | null | undefined,
+  collectionId: string | null | undefined,
+): string | undefined {
+  if (project === undefined) return undefined;
+  if (project === null) {
+    return !collectionId ? "Moved to Basic." : undefined;
+  }
+
+  const projectName = normalizeProjectName(project);
+  if (!projectName) return undefined;
+
+  return collectionId
+    ? `Moved to Project: ${projectName}.`
+    : "Current destination: Basic.";
+}
+
+export function formatWikiCreateResult(
+  doc: WikiDocumentResponse,
+  explicitProject?: string,
+): string {
+  return appendResultSentence(
+    `Wiki document created: "${doc.title}" (ID: ${doc.id})`,
+    formatSavedDestination(doc.routing, doc.collection_id, explicitProject),
+  );
+}
+
+export function formatWikiUpdateResult(
+  doc: WikiDocumentResponse,
+  project: string | null | undefined,
+): string {
+  return appendResultSentence(
+    `Wiki document updated: "${doc.title}" (ID: ${doc.id})`,
+    formatMovedDestination(project, doc.collection_id),
+  );
+}
+
+function formatEpisodeTags(episode: EpisodeBundle["episode"]): string {
+  const tags: string[] = [];
+  if (episode.source && episode.source !== "unknown") {
+    tags.push(`source: ${episode.source}`);
+  }
+
+  const project = stringAttribute(episode.attributes?.project);
+  if (project) {
+    tags.push(`project: ${project}`);
+  }
+
+  return tags.length > 0 ? `[${tags.join(", ")}] ` : "";
+}
+
+function formatEdgeTemporal(edge: EpisodeBundle["edges"][number]): string {
+  const parts: string[] = [];
+  if (edge.valid_at) parts.push(`valid_at=${edge.valid_at}`);
+  if (edge.invalid_at) parts.push(`invalid_at=${edge.invalid_at}`);
+  if (edge.expired_at) parts.push(`expired_at=${edge.expired_at}`);
+  return parts.length > 0 ? ` (${parts.join(", ")})` : "";
+}
+
+export function formatWikiDocumentDetails(doc: {
+  source?: string | null;
+  source_status?: string | null;
+  source_warning?: string | null;
+  source_last_checked_at?: string | null;
+  source_references?: WikiSourceReference[] | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}): string {
+  const parts: string[] = [];
+  const sourceReferences = formatSourceReferences(doc.source_references);
+  if (sourceReferences) {
+    parts.push(sourceReferences);
+  } else if (doc.source) {
+    parts.push(`source: ${doc.source}`);
+  }
+  if (doc.source_status && doc.source_status !== "active") {
+    parts.push(`source_status: ${doc.source_status}`);
+  }
+  if (doc.source_warning) {
+    parts.push(`source_warning: ${doc.source_warning}`);
+  }
+
+  const sourceChecked = formatDate(doc.source_last_checked_at);
+  if (sourceChecked && doc.source_status && doc.source_status !== "active") {
+    parts.push(`source_checked: ${sourceChecked}`);
+  }
+
+  const created = formatDate(doc.created_at);
+  if (created) {
+    parts.push(`created: ${created}`);
+  }
+  const updated = formatDate(doc.updated_at);
+  if (updated) {
+    parts.push(`updated: ${updated}`);
+  }
+
+  return parts.join("; ");
+}
+
+function formatSourceName(source: string | null | undefined): string {
+  if (!source) return "Source";
+  return source
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatSourceReference(ref: WikiSourceReference): string {
+  const label = formatSourceName(ref.source);
+  const title = ref.title?.trim();
+  const base = ref.url
+    ? `${title ? `${label} - ${title}` : label} (${ref.url})`
+    : title
+      ? `${label} - ${title}`
+      : label;
+
+  if (ref.status && ref.status !== "active") {
+    return ref.warning
+      ? `${base} [${ref.status}: ${ref.warning}]`
+      : `${base} [${ref.status}]`;
+  }
+
+  return base;
+}
+
+const SOURCE_REFERENCE_PRIORITY: Record<
+  WikiSourceReference["link_type"],
+  number
+> = {
+  primary: 0,
+  updated: 1,
+  supporting: 2,
+  derived: 3,
+};
+
+function formatSourceReferences(
+  refs: WikiSourceReference[] | null | undefined,
+): string {
+  const sortedRefs = [...(refs ?? [])]
+    .filter((ref) => ref?.source)
+    .sort(
+      (a, b) =>
+        (SOURCE_REFERENCE_PRIORITY[a.link_type] ?? 99) -
+        (SOURCE_REFERENCE_PRIORITY[b.link_type] ?? 99),
+    );
+  const primary = sortedRefs[0];
+  if (!primary) return "";
+  const extraCount = sortedRefs.length - 1;
+  const suffix =
+    extraCount > 0
+      ? `; +${extraCount} additional reference${extraCount === 1 ? "" : "s"}`
+      : "";
+  return `Source: ${formatSourceReference(primary)}${suffix}`;
+}
+
+export function formatBundle(bundle: EpisodeBundle, index: number): string {
   const ep = bundle.episode;
   const name = ep.name || ep.summary || "(untitled)";
   const eventDate = formatDate(ep.valid_at);
@@ -80,19 +285,22 @@ export function formatBundle(
   }
 
   const dateTag = dateParts.length > 0 ? `[${dateParts.join(", ")}] ` : "";
-  const relevanceTag =
-    topScore && rawScore
-      ? `[relevance: ${Math.max(0, Math.min(rawScore / topScore, 1)).toFixed(2)}] `
-      : "";
+  const relevanceTag = rawScore ? `[relevance: ${rawScore.toFixed(4)}] ` : "";
+  const episodeTag = formatEpisodeTags(ep);
 
-  const lines: string[] = [`${index + 1}. ${relevanceTag}${dateTag}${name}`];
+  const lines: string[] = [
+    `${index + 1}. ${relevanceTag}${dateTag}${episodeTag}${name}`,
+  ];
 
   if (ep.summary && ep.summary !== ep.name) {
     lines.push(`   ${ep.summary}`);
   }
 
   const facts = bundle.edges
-    .map((e) => e.fact)
+    .map((e) => {
+      if (!e.fact) return null;
+      return `${e.fact}${formatEdgeTemporal(e)}`;
+    })
     .filter((f): f is string => Boolean(f));
   if (facts.length > 0) {
     lines.push(`   Facts: ${facts.join("; ")}`);
@@ -103,15 +311,8 @@ export function formatBundle(
 
 export function formatBundles(bundles: EpisodeBundle[]): string {
   if (bundles.length === 0) return "No memories found.";
-  const topScore = Math.max(
-    ...bundles.map((bundle) => safeScore(bundle.relevance_score) ?? 0),
-  );
-  const effectiveTopScore = topScore > 0 ? topScore : null;
   const header = `Found ${bundles.length} ${bundles.length === 1 ? "memory" : "memories"}:\n`;
-  return (
-    header +
-    bundles.map((b, i) => formatBundle(b, i, effectiveTopScore)).join("\n")
-  );
+  return header + bundles.map((b, i) => formatBundle(b, i)).join("\n");
 }
 
 export function formatProfile(
@@ -139,14 +340,8 @@ export function formatProfile(
   }
 
   if (bundles.length > 0) {
-    const topScore = Math.max(
-      ...bundles.map((bundle) => safeScore(bundle.relevance_score) ?? 0),
-    );
-    const effectiveTopScore = topScore > 0 ? topScore : null;
     const memoriesHeader = `## Related Memories (${bundles.length})`;
-    const memoriesList = bundles
-      .map((b, i) => formatBundle(b, i, effectiveTopScore))
-      .join("\n");
+    const memoriesList = bundles.map((b, i) => formatBundle(b, i)).join("\n");
     sections.push(`${memoriesHeader}\n${memoriesList}`);
   }
 
@@ -159,17 +354,20 @@ export function formatWikiDocument(
   doc: WikiSearchDocument,
   index: number,
 ): string {
-  const collection = doc.collection_name
-    ? ` [collection: ${doc.collection_name}]`
-    : "";
+  const project = ` [Project: ${formatSearchProjectName(
+    doc.collection_id,
+    doc.collection_name,
+  )}]`;
   const similarity =
     typeof doc.similarity === "number"
       ? ` [similarity: ${doc.similarity.toFixed(3)}]`
       : "";
-  const lines: string[] = [
-    `${index + 1}. ${doc.title}${collection}${similarity}`,
-  ];
+  const lines: string[] = [`${index + 1}. ${doc.title}${project}${similarity}`];
   lines.push(`   ID: ${doc.id}`);
+  const details = formatWikiDocumentDetails(doc);
+  if (details) {
+    lines.push(`   ${details}`);
+  }
   if (doc.content) {
     lines.push(`   ${doc.content}`);
   }

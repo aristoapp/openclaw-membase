@@ -58,7 +58,15 @@ const HEARTBEAT_NOISE_LINE_PATTERNS = [
   /^[-─]{8,}$/i,
 ];
 const SECRET_ASSIGNMENT_RE =
-  /\b([A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*)\s*=\s*[^\s`]+/gi;
+  /\b([A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD|PRIVATE_KEY)[A-Z0-9_]*)\s*=\s*[^\s`]+/gi;
+const PRIVATE_BLOCK_RE = /<(private|membase-private)>[\s\S]*?<\/\1>\s*/gi;
+const BEARER_TOKEN_RE = /\b(authorization:\s*bearer\s+)[A-Za-z0-9._~+/=-]+/gi;
+const CLI_SECRET_FLAG_RE =
+  /((?:^|\s)--(?:api-key|apikey|token|secret|password|pat|key)(?:=|\s+))[^\s`]+/gi;
+const COMMON_TOKEN_RE =
+  /\b(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{20,})\b/g;
+const PRIVATE_KEY_RE =
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g;
 // OpenClaw prepends a timestamp to every user message, e.g. "[Mon 2026-03-23 15:19 GMT+9] "
 const OPENCLAW_TIMESTAMP_PREFIX_RE =
   /^\[[A-Za-z]{3}\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+GMT[+-]\d+\]\s*/gim;
@@ -92,8 +100,14 @@ export function extractTextContent(content: unknown): string {
 export function sanitizeMembaseText(raw: string): string {
   let cleaned = raw;
   cleaned = cleaned.replace(OPENCLAW_TIMESTAMP_PREFIX_RE, " ");
+  cleaned = cleaned.replace(PRIVATE_BLOCK_RE, " ");
   cleaned = cleaned.replace(MEMBASE_CONTEXT_BLOCK_RE, " ");
   cleaned = cleaned.replace(METADATA_BLOCK_RE, " ");
+  cleaned = cleaned.replace(PRIVATE_KEY_RE, "[REDACTED_PRIVATE_KEY]");
+  cleaned = cleaned.replace(SECRET_ASSIGNMENT_RE, "$1=[REDACTED]");
+  cleaned = cleaned.replace(BEARER_TOKEN_RE, "$1[REDACTED]");
+  cleaned = cleaned.replace(CLI_SECRET_FLAG_RE, "$1[REDACTED]");
+  cleaned = cleaned.replace(COMMON_TOKEN_RE, "[REDACTED_TOKEN]");
   cleaned = cleaned.replace(SIMPLE_TAG_RE, " ");
 
   const lines = cleaned
@@ -114,6 +128,22 @@ export function sanitizeRecallQuery(raw: string): string {
   cleaned = cleaned.replace(/```[\s\S]*?```/g, " ");
   cleaned = cleaned.replace(/\s+/g, " ").trim();
   return cleaned.slice(0, 240);
+}
+
+function patternTest(pattern: RegExp, text: string): boolean {
+  pattern.lastIndex = 0;
+  return pattern.test(text);
+}
+
+export function looksSensitive(text: string): boolean {
+  return (
+    patternTest(SECRET_ASSIGNMENT_RE, text) ||
+    patternTest(BEARER_TOKEN_RE, text) ||
+    patternTest(CLI_SECRET_FLAG_RE, text) ||
+    patternTest(COMMON_TOKEN_RE, text) ||
+    patternTest(PRIVATE_KEY_RE, text) ||
+    /\.env(\.|$|\s)/i.test(text)
+  );
 }
 
 export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {

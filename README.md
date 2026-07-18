@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://x.com/intent/follow?screen_name=mem_base"><img src="https://img.shields.io/badge/Follow%20on%20X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X"></a>
-  <a href="https://www.linkedin.com/company/aristotechnologies"><img src="https://img.shields.io/badge/Follow%20on%20LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Follow on LinkedIn"></a>
+  <a href="https://www.linkedin.com/company/aristo"><img src="https://img.shields.io/badge/Follow%20on%20LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="Follow on LinkedIn"></a>
   <a href="https://discord.gg/qfzXNdtmkv"><img src="https://img.shields.io/badge/Join%20Our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Our Discord"></a>
 </p>
 
@@ -55,8 +55,8 @@ User message
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
-│  Auto-Capture           │  Buffers messages, flushes to Membase
-│  (agent_end)            │  for entity/relationship extraction
+│  Auto-Capture           │  Buffers user/assistant messages,
+│  (agent_end)            │  flushes original transcript to Wiki
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
@@ -66,7 +66,7 @@ User message
 ```
 
 - **Auto-Recall**: Before every AI turn, searches memory and wiki context (when enabled) and injects relevant snippets. Skips casual chat and short messages. Respects a `maxRecallChars` budget (default 4000) to avoid oversized context.
-- **Auto-Capture**: After conversations, buffers messages and sends them to Membase for extraction. Entities and relationships are automatically extracted into a knowledge graph. Flushes after 5 minutes of silence or 20 messages.
+- **Auto-Capture**: After conversations, buffers user and assistant messages and saves the original transcript to Membase Wiki. Flushes after 5 minutes of silence or 20 messages.
 - **Knowledge Graph**: Unlike simple vector-only memory, Membase uses hybrid vector search and a knowledge graph to store entities, relationships, and facts.
 
 ## AI Tools
@@ -75,13 +75,14 @@ The agent uses these tools autonomously during conversations:
 
 | Tool | Description |
 | --- | --- |
-| `membase_search` | Search memories by semantic similarity. Supports date filtering (`date_from`, `date_to`, `timezone`) and source filtering (`sources` — e.g. `['slack', 'gmail']`). Returns episode bundles with related facts and relevance scores. |
+| `membase_search` | Search memories by semantic similarity. Supports date filtering (`date_from`, `date_to`, `timezone`) and source filtering (`sources` — integrations, AI clients including `codex`/`hermes`, imports, `notion`, and other sources). Returns episode bundles with related facts and relevance scores. |
+| `membase_get_current_date` | Return runtime local and UTC time before converting relative dates into `date_from`/`date_to`. |
 | `membase_store` | Save important information to long-term memory. Proactively stores preferences, goals, and context. |
 | `membase_forget` | Delete a memory. Shows matches first, then deletes after user confirmation (two-step). |
 | `membase_profile` | Retrieve user profile and related memories for session context. |
-| `membase_search_wiki` | Search wiki documents for factual references and stable knowledge. |
-| `membase_add_wiki` | Create a wiki document from markdown content. |
-| `membase_update_wiki` | Update title/content/collection of an existing wiki document. |
+| `membase_search_wiki` | Search wiki documents for factual references and stable knowledge. Results label Project, Basic, or Unknown destinations. |
+| `membase_add_wiki` | Create a wiki document from full markdown content and an optional Project filing location. Reports the returned destination. |
+| `membase_update_wiki` | Update title/content/Project for an existing wiki document. Set Project to `null` to move to Basic. Reports the returned destination. |
 | `membase_delete_wiki` | Delete a wiki document with confirmation flow. |
 
 ## Example Workflows
@@ -96,8 +97,12 @@ openclaw membase logout             # Remove stored tokens
 openclaw membase search <query>     # Search memories
 openclaw membase search <query> -s slack,gmail  # Filter by source
 openclaw membase wiki-search <query>            # Search wiki documents
+openclaw membase wiki-search <query> --project "Docs"        # Filter by Project
+openclaw membase wiki-search <query> --collection-id <uuid>  # Filter by Project UUID
 openclaw membase wiki-add "<title>" --content "<markdown>"   # Add wiki doc
+openclaw membase wiki-add "<title>" --content "<markdown>" --project "Docs"
 openclaw membase wiki-update <docId> --title "<new title>"   # Update wiki doc
+openclaw membase wiki-update <docId> --clear-project         # Move to Basic
 openclaw membase wiki-delete <docId>            # Delete wiki doc
 openclaw membase status             # Check API connectivity
 ```
@@ -112,7 +117,7 @@ All configuration is managed through OpenClaw's plugin settings or `~/.openclaw/
 | `tokenFile` | string | `~/.openclaw/credentials/openclaw-membase.json` | OAuth token cache file path. Stored outside the plugin directory so it survives updates. |
 | `autoRecall` | boolean | `false` | Inject relevant memories before every AI turn. |
 | `autoWikiRecall` | boolean | `false` | Inject relevant wiki documents before every AI turn. |
-| `autoCapture` | boolean | `true` | Automatically store conversations to memory. |
+| `autoCapture` | boolean | `true` | Automatically store user/assistant conversation transcripts to Wiki. |
 | `maxRecallChars` | number | `4000` | Max characters of memory context per turn (500–16000). |
 | `debug` | boolean | `false` | Enable verbose debug logs. |
 

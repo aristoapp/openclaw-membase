@@ -77,6 +77,7 @@ export function registerStoreTool(
           displaySummary: params.display_summary,
           project: params.project,
         });
+        await client.recordAgentUsage();
         return await toolResponse(`Stored in Membase (${result.status})`);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

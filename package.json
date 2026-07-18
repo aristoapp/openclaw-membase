@@ -1,6 +1,6 @@
 {
   "name": "@membase/openclaw-membase",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/aristoapp/openclaw-membase.git"
@@ -9,15 +9,30 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
     "@types/bun": "^1.2.14",
+    "openclaw": "2026.6.10",
     "typescript": "5.9.2"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.1.0"
+    "openclaw": ">=2026.6.10"
+  },
+  "overrides": {
+    "tar": "7.5.16"
   },
   "description": "Membase plugin for OpenClaw — persistent long-term memory for AI agents",
   "files": [
     "dist/",
-    "src/",
+    "src/client.ts",
+    "src/commands/",
+    "src/config.ts",
+    "src/format.ts",
+    "src/hooks/",
+    "src/index.ts",
+    "src/star-prompt.ts",
+    "src/tools/",
+    "src/types.ts",
+    "src/update-check.ts",
+    "src/utils.ts",
+    "src/wiki-project.ts",
     "skills/",
     "examples/",
     "index.ts",
@@ -39,7 +54,7 @@
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun",
     "prepublishOnly": "bun run build",
-    "lint": "biome check .",
+    "lint": "bunx @biomejs/biome@2.4.6 check .",
     "check-types": "tsc --noEmit"
   },
   "type": "module"
